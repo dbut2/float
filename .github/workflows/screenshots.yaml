@@ -70,18 +70,21 @@ jobs:
           test("home", async ({ page }) => {
             await page.goto(BASE);
             await expect(page.locator("text=Buckets")).toBeVisible();
+            await page.waitForTimeout(2000);
             await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/home.png` });
           });
 
           test("bucket", async ({ page }) => {
             await page.goto(`${BASE}/buckets/${GENERAL_BUCKET}`);
             await expect(page.locator("text=General")).toBeVisible();
+            await page.waitForTimeout(2000);
             await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/bucket.png` });
           });
 
           test("transfers", async ({ page }) => {
             await page.goto(`${BASE}/transfers`);
             await expect(page.getByRole("heading", { name: "Transfers" })).toBeVisible();
+            await page.waitForTimeout(2000);
             await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/transfers.png` });
           });
           SPEC
