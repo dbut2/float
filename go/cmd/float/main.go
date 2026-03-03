@@ -13,6 +13,7 @@ import (
 	"dbut.dev/float/go/api"
 	"dbut.dev/float/go/database"
 	"dbut.dev/float/go/middleware"
+	"dbut.dev/float/go/static"
 )
 
 func main() {
@@ -22,6 +23,8 @@ func main() {
 	apis := r.Group("/api")
 	apis.Use(auth)
 	apiHandler.Register(apis)
+
+	static.Register(r)
 
 	log.Println("starting server on :8080")
 	if err := r.Run(":8080"); err != nil {
