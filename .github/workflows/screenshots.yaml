@@ -7,6 +7,14 @@ on:
 permissions:
   contents: write
 
+env:
+  PAGES: >-
+    [
+      { "name": "home", "path": "/" },
+      { "name": "bucket", "path": "/buckets/00000000-0000-4000-8000-000000000010" },
+      { "name": "transfers", "path": "/transfers" }
+    ]
+
 jobs:
   screenshots:
     name: Screenshots
@@ -50,7 +58,8 @@ jobs:
           docker compose logs
           exit 1
 
-      - name: Take screenshots
+      - name: Check for content changes
+        id: check-content
         working-directory: /tmp/playwright-screenshots
         run: |
           cat > playwright.config.ts <<'EOF'
@@ -58,42 +67,75 @@ jobs:
           export default defineConfig({ testDir: "." });
           EOF
 
-          cat > screenshots.spec.ts <<'SPEC'
-          import { test, expect } from "@playwright/test";
+          cat > hash.spec.ts <<'SPEC'
+          import { test } from "@playwright/test";
+          import { createHash } from "crypto";
+          import { writeFileSync } from "fs";
 
           const BASE = "http://localhost:8080";
-          const GENERAL_BUCKET = "00000000-0000-4000-8000-000000000010";
-          const WORKSPACE = process.env.GITHUB_WORKSPACE!;
+          const pages = JSON.parse(process.env.PAGES!);
 
           test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
 
-          test("home", async ({ page }) => {
-            await page.goto(BASE);
-            await expect(page.locator("text=Buckets")).toBeVisible();
-            await page.waitForTimeout(2000);
-            await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/home.png` });
-          });
-
-          test("bucket", async ({ page }) => {
-            await page.goto(`${BASE}/buckets/${GENERAL_BUCKET}`);
-            await expect(page.locator("text=General")).toBeVisible();
-            await page.waitForTimeout(2000);
-            await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/bucket.png` });
-          });
-
-          test("transfers", async ({ page }) => {
-            await page.goto(`${BASE}/transfers`);
-            await expect(page.getByRole("heading", { name: "Transfers" })).toBeVisible();
-            await page.waitForTimeout(2000);
-            await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/transfers.png` });
+          test("hash page contents", async ({ page }) => {
+            const hash = createHash("sha256");
+            for (const p of pages) {
+              await page.goto(`${BASE}${p.path}`);
+              await page.waitForTimeout(2000);
+              hash.update(await page.content());
+            }
+            writeFileSync("content-hash.txt", hash.digest("hex"));
           });
           SPEC
 
-          npx playwright test
+          npx playwright test --config playwright.config.ts hash.spec.ts
+
+          NEW_HASH=$(cat content-hash.txt)
+          OLD_HASH=""
+          if [ -f "${GITHUB_WORKSPACE}/docs/screenshots/.content-hash" ]; then
+            OLD_HASH=$(cat "${GITHUB_WORKSPACE}/docs/screenshots/.content-hash")
+          fi
+
+          echo "old=$OLD_HASH"
+          echo "new=$NEW_HASH"
+
+          if [ "$NEW_HASH" != "$OLD_HASH" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "hash=$NEW_HASH" >> "$GITHUB_OUTPUT"
+            echo "Content has changed, will regenerate screenshots"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Content unchanged, skipping screenshots"
+          fi
+
+      - name: Take screenshots
+        if: steps.check-content.outputs.changed == 'true'
+        working-directory: /tmp/playwright-screenshots
+        run: |
+          cat > screenshots.spec.ts <<'SPEC'
+          import { test } from "@playwright/test";
+
+          const BASE = "http://localhost:8080";
+          const WORKSPACE = process.env.GITHUB_WORKSPACE!;
+          const pages = JSON.parse(process.env.PAGES!);
+
+          test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
+
+          for (const p of pages) {
+            test(p.name, async ({ page }) => {
+              await page.goto(`${BASE}${p.path}`);
+              await page.waitForTimeout(2000);
+              await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/${p.name}.png` });
+            });
+          }
+          SPEC
+
+          npx playwright test --config playwright.config.ts screenshots.spec.ts
 
       - name: Commit screenshot changes
+        if: steps.check-content.outputs.changed == 'true'
         run: |
-          git diff --quiet docs/screenshots/ && exit 0
+          echo "${{ steps.check-content.outputs.hash }}" > docs/screenshots/.content-hash
           git config user.name "dylan-botler[bot]"
           git config user.email "dylan-botler[bot]@users.noreply.github.com"
           git add docs/screenshots/
