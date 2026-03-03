@@ -10,9 +10,11 @@ import (
 )
 
 func Register(r *gin.Engine) {
-	httpFS := http.FS(web.Dist)
-
-	r.StaticFS("/assets", httpFS)
+	assetsFS, err := fs.Sub(web.Dist, "assets")
+	if err != nil {
+		panic(err)
+	}
+	r.StaticFS("/assets", http.FS(assetsFS))
 
 	indexHTML, err := fs.ReadFile(web.Dist, "index.html")
 	if err != nil {
