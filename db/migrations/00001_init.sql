@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS float.users (
 );
 
 CREATE TABLE IF NOT EXISTS float.user_tokens (
-    user_id     UUID PRIMARY KEY REFERENCES float.users (user_id) ON DELETE CASCADE,
-    up_token    TEXT NOT NULL
+    user_id  UUID PRIMARY KEY REFERENCES float.users (user_id) ON DELETE CASCADE,
+    up_token TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS float.buckets (
