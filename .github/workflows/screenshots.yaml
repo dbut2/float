@@ -58,8 +58,8 @@ jobs:
           docker compose logs
           exit 1
 
-      - name: Check for content changes
-        id: check-content
+      - name: Take screenshots
+        id: screenshots
         working-directory: /tmp/playwright-screenshots
         run: |
           cat > playwright.config.ts <<'EOF'
@@ -67,28 +67,42 @@ jobs:
           export default defineConfig({ testDir: "." });
           EOF
 
-          cat > hash.spec.ts <<'SPEC'
+          cat > screenshots.spec.ts <<'SPEC'
           import { test } from "@playwright/test";
           import { createHash } from "crypto";
           import { writeFileSync } from "fs";
 
           const BASE = "http://localhost:8080";
+          const WORKSPACE = process.env.GITHUB_WORKSPACE!;
           const pages = JSON.parse(process.env.PAGES!);
 
           test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
 
-          test("hash page contents", async ({ page }) => {
+          const mockDate = () => {
+            const FIXED_NOW = new Date('2026-05-10T00:00:00Z').getTime();
+            const _D = globalThis.Date;
+            (globalThis as any).Date = class extends _D {
+              constructor(...args: any[]) {
+                super(...(args.length ? args : [FIXED_NOW]));
+              }
+              static now() { return FIXED_NOW; }
+            };
+          };
+
+          test("screenshots", async ({ page }) => {
             const hash = createHash("sha256");
+            await page.addInitScript(mockDate);
             for (const p of pages) {
               await page.goto(`${BASE}${p.path}`);
               await page.waitForTimeout(2000);
               hash.update(await page.content());
+              await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/${p.name}.png` });
             }
             writeFileSync("content-hash.txt", hash.digest("hex"));
           });
           SPEC
 
-          npx playwright test --config playwright.config.ts hash.spec.ts
+          npx playwright test --config playwright.config.ts screenshots.spec.ts
 
           NEW_HASH=$(cat content-hash.txt)
           OLD_HASH=""
@@ -102,40 +116,17 @@ jobs:
           if [ "$NEW_HASH" != "$OLD_HASH" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "hash=$NEW_HASH" >> "$GITHUB_OUTPUT"
-            echo "Content has changed, will regenerate screenshots"
+            echo "Content has changed, will commit screenshots"
           else
+            git -C "${GITHUB_WORKSPACE}" restore docs/screenshots/
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Content unchanged, skipping screenshots"
+            echo "Content unchanged, screenshots discarded"
           fi
 
-      - name: Take screenshots
-        if: steps.check-content.outputs.changed == 'true'
-        working-directory: /tmp/playwright-screenshots
-        run: |
-          cat > screenshots.spec.ts <<'SPEC'
-          import { test } from "@playwright/test";
-
-          const BASE = "http://localhost:8080";
-          const WORKSPACE = process.env.GITHUB_WORKSPACE!;
-          const pages = JSON.parse(process.env.PAGES!);
-
-          test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
-
-          for (const p of pages) {
-            test(p.name, async ({ page }) => {
-              await page.goto(`${BASE}${p.path}`);
-              await page.waitForTimeout(2000);
-              await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/${p.name}.png` });
-            });
-          }
-          SPEC
-
-          npx playwright test --config playwright.config.ts screenshots.spec.ts
-
       - name: Commit screenshot changes
-        if: steps.check-content.outputs.changed == 'true'
+        if: steps.screenshots.outputs.changed == 'true'
         run: |
-          echo "${{ steps.check-content.outputs.hash }}" > docs/screenshots/.content-hash
+          echo "${{ steps.screenshots.outputs.hash }}" > docs/screenshots/.content-hash
           git config user.name "dylan-botler[bot]"
           git config user.email "dylan-botler[bot]@users.noreply.github.com"
           git add docs/screenshots/
