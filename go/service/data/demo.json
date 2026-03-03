@@ -1,0 +1,225 @@
+{
+  "user": {
+    "user_id": "00000000-0000-4000-8000-000000000001",
+    "email": "demo@float.dbut.dev",
+    "created_at": "2026-01-01T:00:00Z"
+  },
+  "buckets": [
+    {
+      "bucket_id": "00000000-0000-4000-8000-000000000010",
+      "name": "General",
+      "is_general": true,
+      "created_at": "2026-01-15T10:00:00Z"
+    },
+    {
+      "bucket_id": "00000000-0000-4000-8000-000000000011",
+      "name": "Rent",
+      "is_general": false,
+      "created_at": "2026-01-16T08:00:00Z"
+    },
+    {
+      "bucket_id": "00000000-0000-4000-8000-000000000012",
+      "name": "Groceries",
+      "is_general": false,
+      "created_at": "2026-01-16T08:30:00Z"
+    },
+    {
+      "bucket_id": "00000000-0000-4000-8000-000000000013",
+      "name": "Savings",
+      "is_general": false,
+      "created_at": "2026-01-17T09:00:00Z"
+    },
+    {
+      "bucket_id": "00000000-0000-4000-8000-000000000014",
+      "name": "Travel",
+      "is_general": false,
+      "created_at": "2026-01-18T10:00:00Z"
+    }
+  ],
+  "transactions": [
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000100",
+      "bucket_id": "00000000-0000-4000-8000-000000000010",
+      "description": "Salary",
+      "message": "February pay",
+      "amount_cents": 520000,
+      "display_amount": "5200.00",
+      "currency_code": "AUD",
+      "created_at": "2026-02-28T09:00:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000101",
+      "bucket_id": "00000000-0000-4000-8000-000000000010",
+      "description": "Salary",
+      "message": "January pay",
+      "amount_cents": 520000,
+      "display_amount": "5200.00",
+      "currency_code": "AUD",
+      "created_at": "2026-01-31T09:00:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000102",
+      "bucket_id": "00000000-0000-4000-8000-000000000011",
+      "description": "Rent Payment",
+      "message": "",
+      "amount_cents": -180000,
+      "display_amount": "-1800.00",
+      "currency_code": "AUD",
+      "created_at": "2026-02-01T10:00:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000103",
+      "bucket_id": "00000000-0000-4000-8000-000000000011",
+      "description": "Rent Payment",
+      "message": "",
+      "amount_cents": -180000,
+      "display_amount": "-1800.00",
+      "currency_code": "AUD",
+      "created_at": "2026-03-01T10:00:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000104",
+      "bucket_id": "00000000-0000-4000-8000-000000000012",
+      "description": "Woolworths",
+      "message": "Weekly shop",
+      "amount_cents": -8543,
+      "display_amount": "-85.43",
+      "currency_code": "AUD",
+      "created_at": "2026-02-10T14:30:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000105",
+      "bucket_id": "00000000-0000-4000-8000-000000000012",
+      "description": "Coles",
+      "message": "",
+      "amount_cents": -6290,
+      "display_amount": "-62.90",
+      "currency_code": "AUD",
+      "created_at": "2026-02-17T16:00:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000106",
+      "bucket_id": "00000000-0000-4000-8000-000000000012",
+      "description": "Woolworths",
+      "message": "Weekly shop",
+      "amount_cents": -9120,
+      "display_amount": "-91.20",
+      "currency_code": "AUD",
+      "created_at": "2026-02-24T13:15:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000107",
+      "bucket_id": "00000000-0000-4000-8000-000000000010",
+      "description": "Netflix",
+      "message": "",
+      "amount_cents": -1699,
+      "display_amount": "-16.99",
+      "currency_code": "AUD",
+      "created_at": "2026-02-05T00:00:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000108",
+      "bucket_id": "00000000-0000-4000-8000-000000000010",
+      "description": "Spotify",
+      "message": "",
+      "amount_cents": -1299,
+      "display_amount": "-12.99",
+      "currency_code": "AUD",
+      "created_at": "2026-02-05T00:00:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000109",
+      "bucket_id": "00000000-0000-4000-8000-000000000010",
+      "description": "Electricity Bill",
+      "message": "Quarterly bill",
+      "amount_cents": -24500,
+      "display_amount": "-245.00",
+      "currency_code": "AUD",
+      "created_at": "2026-02-15T09:00:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000110",
+      "bucket_id": "00000000-0000-4000-8000-000000000014",
+      "description": "Booking.com",
+      "message": "Cairns hotel",
+      "amount_cents": -35000,
+      "display_amount": "-350.00",
+      "currency_code": "AUD",
+      "created_at": "2026-02-20T11:00:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000111",
+      "bucket_id": "00000000-0000-4000-8000-000000000014",
+      "description": "Jetstar",
+      "message": "Return flights MEL-CNS",
+      "amount_cents": -28900,
+      "display_amount": "-289.00",
+      "currency_code": "AUD",
+      "created_at": "2026-02-18T15:30:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000112",
+      "bucket_id": "00000000-0000-4000-8000-000000000010",
+      "description": "Coffee",
+      "message": "",
+      "amount_cents": -550,
+      "display_amount": "-5.50",
+      "currency_code": "AUD",
+      "created_at": "2026-02-26T07:30:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000113",
+      "bucket_id": "00000000-0000-4000-8000-000000000010",
+      "description": "Interest",
+      "message": "Monthly interest",
+      "amount_cents": 1250,
+      "display_amount": "12.50",
+      "currency_code": "AUD",
+      "created_at": "2026-02-28T23:59:00Z"
+    },
+    {
+      "transaction_id": "00000000-0000-4000-8000-000000000114",
+      "bucket_id": "00000000-0000-4000-8000-000000000012",
+      "description": "Aldi",
+      "message": "",
+      "amount_cents": -4380,
+      "display_amount": "-43.80",
+      "currency_code": "AUD",
+      "created_at": "2026-03-01T11:00:00Z"
+    }
+  ],
+  "transfers": [
+    {
+      "transfer_id": "00000000-0000-4000-8000-000000000200",
+      "from_bucket_id": "00000000-0000-4000-8000-000000000010",
+      "to_bucket_id": "00000000-0000-4000-8000-000000000011",
+      "amount_cents": 360000,
+      "note": "Rent for Jan + Feb",
+      "created_at": "2026-01-31T18:00:00Z"
+    },
+    {
+      "transfer_id": "00000000-0000-4000-8000-000000000201",
+      "from_bucket_id": "00000000-0000-4000-8000-000000000010",
+      "to_bucket_id": "00000000-0000-4000-8000-000000000012",
+      "amount_cents": 40000,
+      "note": "Grocery budget",
+      "created_at": "2026-02-01T08:00:00Z"
+    },
+    {
+      "transfer_id": "00000000-0000-4000-8000-000000000202",
+      "from_bucket_id": "00000000-0000-4000-8000-000000000010",
+      "to_bucket_id": "00000000-0000-4000-8000-000000000013",
+      "amount_cents": 100000,
+      "note": "Monthly savings",
+      "created_at": "2026-02-01T08:30:00Z"
+    },
+    {
+      "transfer_id": "00000000-0000-4000-8000-000000000203",
+      "from_bucket_id": "00000000-0000-4000-8000-000000000010",
+      "to_bucket_id": "00000000-0000-4000-8000-000000000014",
+      "amount_cents": 75000,
+      "note": "Holiday fund",
+      "created_at": "2026-02-15T09:00:00Z"
+    }
+  ]
+}

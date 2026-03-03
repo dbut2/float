@@ -16,17 +16,39 @@ import (
 )
 
 func main() {
-	databaseDSN := os.Getenv("DATABASE_DSN")
+	apiHandler, auth := setup()
 
-	db, err := sql.Open("postgres", databaseDSN)
+	r := gin.Default()
+	apis := r.Group("/api")
+	apis.Use(auth)
+	apiHandler.Register(apis)
+
+	log.Println("starting server on :8080")
+	if err := r.Run(":8080"); err != nil {
+		log.Fatalf("failed to start server: %v", err)
+	}
+}
+
+func setup() (*api.API, gin.HandlerFunc) {
+	if os.Getenv("DEMO_MODE") == "true" {
+		apiHandler, userID := api.NewDemo()
+		return apiHandler, middleware.DemoAuth(userID)
+	}
+
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_DSN"))
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
-	defer func() { _ = db.Close() }()
 	if err := db.Ping(); err != nil {
 		log.Fatalf("failed to ping database: %v", err)
 	}
 
+	runMigrations(db)
+	queries := database.New(db)
+	return api.New(queries), middleware.Auth(queries)
+}
+
+func runMigrations(db *sql.DB) {
 	if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS float"); err != nil {
 		log.Fatalf("failed to create schema: %v", err)
 	}
@@ -38,19 +60,5 @@ func main() {
 	}
 	if err := goose.Up(db, "."); err != nil {
 		log.Fatalf("failed to run database migrations: %v", err)
-	}
-
-	queries := database.New(db)
-	apiHandler := api.New(queries)
-
-	r := gin.Default()
-
-	apis := r.Group("/api")
-	apis.Use(middleware.Auth(queries))
-	apiHandler.Register(apis)
-
-	log.Println("starting server on :8080")
-	if err := r.Run(":8080"); err != nil {
-		log.Fatalf("failed to start server: %v", err)
 	}
 }

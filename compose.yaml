@@ -15,19 +15,20 @@ services:
       context: .
       target: backend
     environment:
-      - DATABASE_DSN=postgres://float:float@db:5432/float?sslmode=disable
-    depends_on:
-      db:
-        condition: service_healthy
+      - DEMO_MODE=true
+#      - DATABASE_DSN=postgres://float:float@db:5432/float?sslmode=disable
+#    depends_on:
+#      db:
+#        condition: service_healthy
 
-  db:
-    image: postgres:18
-    environment:
-      POSTGRES_USER: float
-      POSTGRES_PASSWORD: float
-      POSTGRES_DB: float
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U float"]
-      interval: 2s
-      timeout: 5s
-      retries: 5
+#  db:
+#    image: postgres:18
+#    environment:
+#      POSTGRES_USER: float
+#      POSTGRES_PASSWORD: float
+#      POSTGRES_DB: float
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U float"]
+#      interval: 2s
+#      timeout: 5s
+#      retries: 5

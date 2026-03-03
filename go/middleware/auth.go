@@ -36,6 +36,13 @@ func Auth(queries database.Querier) gin.HandlerFunc {
 	}
 }
 
+func DemoAuth(userID uuid.UUID) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set("user_id", userID)
+		c.Next()
+	}
+}
+
 func GetUserID(c *gin.Context) uuid.UUID {
 	return c.MustGet("user_id").(uuid.UUID)
 }
