@@ -1,0 +1,14 @@
+services:
+  backend:
+    build:
+      context: .
+      target: backend
+    environment:
+      - DATABASE_DSN=postgres://float:float@db:5432/float?sslmode=disable
+
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: float
+      POSTGRES_PASSWORD: float
+      POSTGRES_DB: float
