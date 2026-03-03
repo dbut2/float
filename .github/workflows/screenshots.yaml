@@ -82,7 +82,7 @@ jobs:
 
           test("transfers", async ({ page }) => {
             await page.goto(`${BASE}/transfers`);
-            await expect(page.locator("text=Transfers")).toBeVisible();
+            await expect(page.getByRole("heading", { name: "Transfers" })).toBeVisible();
             await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/transfers.png` });
           });
           SPEC
