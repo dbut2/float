@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
 
 	floatDB "dbut.dev/float/db"
@@ -22,8 +23,12 @@ func main() {
 		log.Fatalf("failed to ping database: %v", err)
 	}
 
+	if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS float"); err != nil {
+		log.Fatalf("failed to create schema: %v", err)
+	}
+
 	goose.SetBaseFS(floatDB.Migrations)
-	goose.SetTableName("bank.goose_db_version")
+	goose.SetTableName("float.goose_db_version")
 	if err := goose.SetDialect("postgres"); err != nil {
 		log.Fatalf("failed to set goose dialect: %v", err)
 	}
