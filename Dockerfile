@@ -1,7 +1,17 @@
+FROM node:22-alpine AS frontend-builder
+
+WORKDIR /app
+
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+COPY web/ ./
+RUN npm run build
+
 FROM nginx:alpine AS frontend
 
 COPY web/nginx.conf.template /etc/nginx/templates/default.conf.template
-COPY web/public/ /usr/share/nginx/html/
+COPY --from=frontend-builder /app/dist/ /usr/share/nginx/html/
 
 ENV BACKEND_HOST=backend:8080
 

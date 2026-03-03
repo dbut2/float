@@ -64,3 +64,13 @@ jobs:
 
       - name: Build
         run: go build ./go/...
+
+  docker:
+    name: Docker Compose
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Build images
+        run: docker compose build
