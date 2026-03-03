@@ -1,8 +1,8 @@
 {
   "user": {
     "user_id": "00000000-0000-4000-8000-000000000001",
-    "email": "demo@float.dbut.dev",
-    "created_at": "2026-01-01T:00:00Z"
+    "email": "demo@float-demo.dbut.dev",
+    "created_at": "2026-01-01T00:00:00Z"
   },
   "buckets": [
     {

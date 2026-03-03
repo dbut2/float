@@ -1,0 +1,105 @@
+name: Screenshots
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: write
+
+jobs:
+  screenshots:
+    name: Screenshots
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App token
+        id: generate-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: dbut2
+
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          ref: ${{ github.head_ref }}
+
+      - name: Install Playwright
+        run: |
+          mkdir -p /tmp/playwright-screenshots
+          cd /tmp/playwright-screenshots
+          npm init -y > /dev/null
+          npm install @playwright/test > /dev/null
+          npx playwright install chromium --with-deps
+
+      - name: Build and start services
+        run: docker compose up -d --build
+
+      - name: Wait for app to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080 > /dev/null 2>&1; then
+              echo "App is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "App failed to start"
+          docker compose logs
+          exit 1
+
+      - name: Take screenshots
+        working-directory: /tmp/playwright-screenshots
+        run: |
+          cat > playwright.config.ts <<'EOF'
+          import { defineConfig } from "@playwright/test";
+          export default defineConfig({ testDir: "." });
+          EOF
+
+          cat > screenshots.spec.ts <<'SPEC'
+          import { test, expect } from "@playwright/test";
+
+          const BASE = "http://localhost:8080";
+          const GENERAL_BUCKET = "00000000-0000-4000-8000-000000000010";
+          const WORKSPACE = process.env.GITHUB_WORKSPACE!;
+
+          test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
+
+          test("home", async ({ page }) => {
+            await page.goto(BASE);
+            await expect(page.locator("text=Buckets")).toBeVisible();
+            await page.waitForTimeout(2000);
+            await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/home.png` });
+          });
+
+          test("bucket", async ({ page }) => {
+            await page.goto(`${BASE}/buckets/${GENERAL_BUCKET}`);
+            await expect(page.locator("text=General")).toBeVisible();
+            await page.waitForTimeout(2000);
+            await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/bucket.png` });
+          });
+
+          test("transfers", async ({ page }) => {
+            await page.goto(`${BASE}/transfers`);
+            await expect(page.getByRole("heading", { name: "Transfers" })).toBeVisible();
+            await page.waitForTimeout(2000);
+            await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/transfers.png` });
+          });
+          SPEC
+
+          npx playwright test
+
+      - name: Commit screenshot changes
+        run: |
+          git diff --quiet docs/screenshots/ && exit 0
+          git config user.name "dylan-botler[bot]"
+          git config user.email "dylan-botler[bot]@users.noreply.github.com"
+          git add docs/screenshots/
+          git commit -m "Update screenshots"
+          git push
+
+      - name: Stop services
+        if: always()
+        run: docker compose down
