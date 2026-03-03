@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	github.com/google/uuid v1.6.0
+	github.com/lib/pq v1.11.2
 	github.com/pressly/goose/v3 v3.27.0
 )
 
