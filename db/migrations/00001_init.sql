@@ -54,7 +54,9 @@ CREATE TABLE IF NOT EXISTS float.bucket_transfers (
 CREATE OR REPLACE VIEW float.bucket_ledger AS
     SELECT bucket_id,
            amount_cents,
-           created_at
+           created_at,
+           TRUE AS is_transaction,
+           transaction_id
     FROM float.up_transactions
     WHERE transaction_type IS DISTINCT FROM 'Transfer'
       AND transaction_type IS DISTINCT FROM 'Round Up'
@@ -63,14 +65,18 @@ CREATE OR REPLACE VIEW float.bucket_ledger AS
 
     SELECT to_bucket_id AS bucket_id,
            amount_cents,
-           created_at
+           created_at,
+           FALSE AS is_transaction,
+           NULL AS transaction_id
     FROM float.bucket_transfers
 
     UNION ALL
 
     SELECT from_bucket_id AS bucket_id,
            -amount_cents AS amount_cents,
-           created_at
+           created_at,
+           FALSE AS is_transaction,
+           NULL AS transaction_id
     FROM float.bucket_transfers;
 
 -- +goose Down
