@@ -18,7 +18,6 @@ jobs:
         with:
           app-id: ${{ secrets.GH_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          repositories: dbut2.github.io
           owner: dbut2
 
       - name: Check out code
