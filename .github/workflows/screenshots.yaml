@@ -69,6 +69,8 @@ jobs:
 
           cat > screenshots.spec.ts <<'SPEC'
           import { test } from "@playwright/test";
+          import { createHash } from "crypto";
+          import { writeFileSync } from "fs";
 
           const BASE = "http://localhost:8080";
           const WORKSPACE = process.env.GITHUB_WORKSPACE!;
@@ -87,29 +89,44 @@ jobs:
             };
           };
 
-          for (const p of pages) {
-            test(p.name, async ({ page }) => {
-              await page.addInitScript(mockDate);
+          test("screenshots", async ({ page }) => {
+            const hash = createHash("sha256");
+            await page.addInitScript(mockDate);
+            for (const p of pages) {
               await page.goto(`${BASE}${p.path}`);
               await page.waitForTimeout(2000);
+              hash.update(await page.content());
               await page.screenshot({ path: `${WORKSPACE}/docs/screenshots/${p.name}.png` });
-            });
-          }
+            }
+            writeFileSync("content-hash.txt", hash.digest("hex"));
+          });
           SPEC
 
           npx playwright test --config playwright.config.ts screenshots.spec.ts
 
-          if git -C "${GITHUB_WORKSPACE}" diff --quiet docs/screenshots/; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Screenshots unchanged"
-          else
+          NEW_HASH=$(cat content-hash.txt)
+          OLD_HASH=""
+          if [ -f "${GITHUB_WORKSPACE}/docs/screenshots/.content-hash" ]; then
+            OLD_HASH=$(cat "${GITHUB_WORKSPACE}/docs/screenshots/.content-hash")
+          fi
+
+          echo "old=$OLD_HASH"
+          echo "new=$NEW_HASH"
+
+          if [ "$NEW_HASH" != "$OLD_HASH" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Screenshots changed"
+            echo "hash=$NEW_HASH" >> "$GITHUB_OUTPUT"
+            echo "Content has changed, will commit screenshots"
+          else
+            git -C "${GITHUB_WORKSPACE}" restore docs/screenshots/
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Content unchanged, screenshots discarded"
           fi
 
       - name: Commit screenshot changes
         if: steps.screenshots.outputs.changed == 'true'
         run: |
+          echo "${{ steps.screenshots.outputs.hash }}" > docs/screenshots/.content-hash
           git config user.name "dylan-botler[bot]"
           git config user.email "dylan-botler[bot]@users.noreply.github.com"
           git add docs/screenshots/
