@@ -1,6 +1,7 @@
 package static
 
 import (
+	"io/fs"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,10 +13,16 @@ func Register(r *gin.Engine) {
 	httpFS := http.FS(web.Dist)
 
 	r.StaticFS("/assets", httpFS)
-	r.GET("/", func(c *gin.Context) {
-		c.FileFromFS("index.html", httpFS)
-	})
-	r.NoRoute(func(c *gin.Context) {
-		c.FileFromFS("index.html", httpFS)
-	})
+
+	indexHTML, err := fs.ReadFile(web.Dist, "index.html")
+	if err != nil {
+		panic(err)
+	}
+
+	serveIndex := func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
+	}
+
+	r.GET("/", serveIndex)
+	r.NoRoute(serveIndex)
 }
