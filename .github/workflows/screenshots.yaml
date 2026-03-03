@@ -29,7 +29,8 @@ jobs:
 
       - name: Install Playwright
         run: |
-          cd /tmp
+          mkdir -p /tmp/playwright-screenshots
+          cd /tmp/playwright-screenshots
           npm init -y > /dev/null
           npm install @playwright/test > /dev/null
           npx playwright install chromium --with-deps
@@ -51,7 +52,7 @@ jobs:
           exit 1
 
       - name: Take screenshots
-        working-directory: /tmp
+        working-directory: /tmp/playwright-screenshots
         run: |
           cat > playwright.config.ts <<'EOF'
           import { defineConfig } from "@playwright/test";
