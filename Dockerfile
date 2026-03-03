@@ -8,15 +8,6 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM nginx:alpine AS frontend
-
-COPY web/nginx.conf.template /etc/nginx/templates/default.conf.template
-COPY --from=frontend-builder /app/dist/ /usr/share/nginx/html/
-
-ENV BACKEND_HOST=backend:8080
-
-EXPOSE 8080
-
 FROM golang:1.26-alpine AS backend-builder
 
 WORKDIR /bank
@@ -25,10 +16,12 @@ RUN go mod download
 
 COPY go/ ./go/
 COPY db/ ./db/
+COPY --from=frontend-builder /app/dist/ ./web/dist/
+COPY web/embed.go ./web/embed.go
 
 RUN go build -o /bin/float ./go/cmd/float
 
-FROM alpine AS backend
+FROM alpine AS final
 
 COPY --from=backend-builder /bin/float /float
 
