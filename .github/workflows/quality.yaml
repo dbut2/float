@@ -65,6 +65,45 @@ jobs:
       - name: Build
         run: go build ./go/...
 
+  tidy:
+    name: Go Mod Tidy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ./go.mod
+
+      - name: Run go mod tidy
+        run: go mod tidy
+
+      - name: Check for drift
+        run: git diff --exit-code go.mod go.sum
+
+  generate:
+    name: Go Generate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ./go.mod
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Run go generate
+        run: go generate ./...
+
+      - name: Check for drift
+        run: git diff --exit-code
+
   docker:
     name: Docker Compose
     runs-on: ubuntu-latest
