@@ -2,11 +2,11 @@
 INSERT INTO float.up_transactions (
     transaction_id, bucket_id, description, message,
     amount_cents, display_amount, currency_code, created_at, transaction_type,
-    deep_link_url, raw_json
+    raw_json
 ) VALUES (
     $1,
     (SELECT bucket_id FROM float.buckets WHERE user_id = $2 AND is_general = TRUE),
-    $3, $4, $5, $6, $7, $8, $9, $10, $11
+    $3, $4, $5, $6, $7, $8, $9, $10
 )
 ON CONFLICT (transaction_id) DO UPDATE SET
     description = EXCLUDED.description,

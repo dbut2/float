@@ -253,31 +253,6 @@ export default function BucketDetail() {
                   >
                     {isDebit ? '−' : '+'}{formatAUD(tx.amount_cents)}
                   </span>
-                  {tx.deep_link_url && (
-                    <a
-                      href={tx.deep_link_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 8,
-                        background: 'rgba(255,112,0,0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        fontSize: 12,
-                        color: '#FF7000',
-                        textDecoration: 'none',
-                        fontFamily: 'Syne',
-                        fontWeight: 700,
-                      }}
-                    >
-                      Up
-                    </a>
-                  )}
                 </button>
               )
             }
