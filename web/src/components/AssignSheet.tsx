@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ExternalLink, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { api, formatAUD, type Transaction } from '../lib/api'
 import { useDraggableSheet } from '../hooks/useDraggableSheet'
 import { useMediaQuery } from '../hooks/useMediaQuery'
