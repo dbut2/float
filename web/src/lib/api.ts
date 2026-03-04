@@ -39,6 +39,20 @@ export interface Transfer {
   created_at: string
 }
 
+export interface Trickle {
+  trickle_id: string
+  from_bucket_id: string
+  from_bucket_name: string
+  to_bucket_id: string
+  to_bucket_name: string
+  amount_cents: number
+  description: string
+  period: 'daily' | 'weekly' | 'fortnightly' | 'monthly'
+  start_date: string
+  end_date: string | null
+  created_at: string
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { 'Content-Type': 'application/json', ...init?.headers },
@@ -97,6 +111,19 @@ export const api = {
 
   deleteTransfer: (id: string) =>
     request<void>(`/api/transfers/${id}`, { method: 'DELETE' }),
+
+  getTrickles: () => request<Trickle[]>('/api/trickles'),
+
+  getTrickle: (bucketId: string) => request<Trickle>(`/api/buckets/${bucketId}/trickle`),
+
+  upsertTrickle: (bucketId: string, data: { amount_cents: number; description: string; period: string; start_date: string; end_date: string | null }) =>
+    request<Trickle>(`/api/buckets/${bucketId}/trickle`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteTrickle: (bucketId: string) =>
+    request<void>(`/api/buckets/${bucketId}/trickle`, { method: 'DELETE' }),
 }
 
 export function formatAUD(cents: number): string {

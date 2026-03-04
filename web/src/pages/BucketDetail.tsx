@@ -2,15 +2,23 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
-import { api, formatAUD, formatDate, type Transaction, type Transfer } from '../lib/api'
+import { api, formatAUD, formatDate, type Transaction, type Transfer, type Trickle } from '../lib/api'
 import AssignSheet from '../components/AssignSheet'
 import TransferSheet from '../components/TransferSheet'
+import TrickleSheet from '../components/TrickleSheet'
 import { useDraggableSheet } from '../hooks/useDraggableSheet'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 
 type ListItem =
   | { kind: 'transaction'; tx: Transaction }
   | { kind: 'transfer'; t: Transfer; amountCents: number }
+  | { kind: 'trickle'; tx: Transaction }
+
+function isTrickleEntry(tx: Transaction, bucketTransfers: Transfer[]): boolean {
+  if (tx.is_transaction) return false
+  const txTime = new Date(tx.created_at).getTime()
+  return !bucketTransfers.some((t) => Math.abs(new Date(t.created_at).getTime() - txTime) < 1000)
+}
 
 export default function BucketDetail() {
   const { id } = useParams<{ id: string }>()
@@ -20,6 +28,7 @@ export default function BucketDetail() {
   const [assignTx, setAssignTx] = useState<Transaction | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showTransfer, setShowTransfer] = useState(false)
+  const [showTrickle, setShowTrickle] = useState(false)
 
   const { data: buckets = [] } = useQuery({
     queryKey: ['buckets'],
@@ -38,23 +47,34 @@ export default function BucketDetail() {
     queryFn: api.getTransfers,
   })
 
-  const transactions = bucketTx
+  const { data: trickle = null } = useQuery({
+    queryKey: ['trickle', bucketId],
+    queryFn: () => api.getTrickle(bucketId).catch((e: Error) => {
+      if (e.message.includes('404') || e.message.toLowerCase().includes('not found')) return null
+      throw e
+    }),
+    enabled: !!bucketId,
+  })
 
   // Transfers relevant to this bucket
   const bucketTransfers = allTransfers.filter((t) =>
     t.from_bucket_id === bucketId || t.to_bucket_id === bucketId,
   )
 
-  // Unified sorted list: transactions + transfers
   const listItems: ListItem[] = [
-    ...transactions.map((tx): ListItem => ({ kind: 'transaction', tx })),
+    ...bucketTx.map((tx): ListItem => {
+      if (!tx.is_transaction && isTrickleEntry(tx, bucketTransfers)) {
+        return { kind: 'trickle', tx }
+      }
+      return { kind: 'transaction', tx }
+    }),
     ...bucketTransfers.map((t): ListItem => {
       const isOutgoing = t.from_bucket_id === bucketId
       return { kind: 'transfer', t, amountCents: isOutgoing ? -t.amount_cents : t.amount_cents }
     }),
   ].sort((a, b) => {
-    const dateA = a.kind === 'transaction' ? a.tx.created_at : a.t.created_at
-    const dateB = b.kind === 'transaction' ? b.tx.created_at : b.t.created_at
+    const dateA = a.kind === 'transaction' || a.kind === 'trickle' ? a.tx.created_at : a.t.created_at
+    const dateB = b.kind === 'transaction' || b.kind === 'trickle' ? b.tx.created_at : b.t.created_at
     return new Date(dateB).getTime() - new Date(dateA).getTime()
   })
 
@@ -66,6 +86,14 @@ export default function BucketDetail() {
     },
   })
 
+  const deleteTrickleMutation = useMutation({
+    mutationFn: () => api.deleteTrickle(bucketId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['buckets'] })
+      qc.invalidateQueries({ queryKey: ['trickle', bucketId] })
+    },
+  })
+
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const handleDeleteClose = () => setConfirmDelete(false)
   const { handleRef: deleteHandleRef, sheetStyle: deleteSheetStyle, backdropStyle: deleteBackdropStyle, onAnimationEnd: deleteOnAnimationEnd } = useDraggableSheet({ onClose: handleDeleteClose, isOpen: confirmDelete })
@@ -73,6 +101,11 @@ export default function BucketDetail() {
   if (!bucket && buckets.length > 0) {
     navigate('/', { replace: true })
     return null
+  }
+
+  const periodLabel = (t: Trickle) => {
+    const map: Record<string, string> = { daily: 'Daily', weekly: 'Weekly', fortnightly: 'Fortnightly', monthly: 'Monthly' }
+    return map[t.period] ?? t.period
   }
 
   return (
@@ -118,6 +151,26 @@ export default function BucketDetail() {
             </h1>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
+            {!bucket?.is_general && (
+              <button
+                onClick={() => setShowTrickle(true)}
+                style={{
+                  background: 'var(--surface)',
+                  border: 'none',
+                  borderRadius: 10,
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: 16,
+                }}
+                title="Manage trickle"
+              >
+                ⟳
+              </button>
+            )}
             <button
               onClick={() => setShowTransfer(true)}
               style={{
@@ -157,6 +210,83 @@ export default function BucketDetail() {
           </div>
         </div>
 
+        {!bucket?.is_general && (
+          <div
+            style={{
+              background: 'var(--surface)',
+              borderRadius: 16,
+              padding: '14px 16px',
+              marginBottom: 16,
+            }}
+          >
+            {trickle ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 20, color: 'var(--accent)', flexShrink: 0 }}>⟳</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>
+                    {formatAUD(trickle.amount_cents)} · {periodLabel(trickle)}
+                  </p>
+                  {trickle.description && (
+                    <p className="line-clamp-1" style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{trickle.description}</p>
+                  )}
+                  <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                    From {trickle.from_bucket_name} · starts {trickle.start_date.slice(0, 10)}{trickle.end_date ? ` · ends ${trickle.end_date.slice(0, 10)}` : ''}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  <button
+                    onClick={() => setShowTrickle(true)}
+                    style={{
+                      background: 'var(--surface-2)',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '6px 12px',
+                      color: 'var(--text)',
+                      fontFamily: 'DM Sans',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => deleteTrickleMutation.mutate()}
+                    disabled={deleteTrickleMutation.isPending}
+                    style={{
+                      background: 'rgba(248,113,113,0.1)',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '6px 10px',
+                      color: 'var(--red)',
+                      fontFamily: 'DM Sans',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {deleteTrickleMutation.isPending ? '…' : '✕'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowTrickle(true)}
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                <span style={{ fontSize: 20, color: 'var(--text-2)' }}>⟳</span>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 14, color: 'var(--text-2)' }}>Add Trickle</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Transaction list */}
@@ -201,13 +331,13 @@ export default function BucketDetail() {
             <p style={{ fontFamily: 'DM Sans', fontSize: 15 }}>No transactions assigned</p>
           </div>
         ) : (
-          listItems.map((item) => {
+          listItems.map((item, idx) => {
             if (item.kind === 'transaction') {
               const tx = item.tx
               const isDebit = tx.amount_cents < 0
               return (
                 <button
-                  key={`tx-${tx.transaction_id}`}
+                  key={`tx-${idx}`}
                   onClick={() => setAssignTx(tx)}
                   className="pressable"
                   style={{
@@ -254,6 +384,63 @@ export default function BucketDetail() {
                     {isDebit ? '−' : '+'}{formatAUD(tx.amount_cents)}
                   </span>
                 </button>
+              )
+            }
+
+            if (item.kind === 'trickle') {
+              const tx = item.tx
+              const isDebit = tx.amount_cents < 0
+              const label = isDebit ? `Trickle to ${bucket?.name ?? ''}` : `Trickle from General`
+              const txDate = new Date(tx.created_at)
+              const isActive = Math.abs(Date.now() - txDate.getTime()) < 300000
+              return (
+                <div
+                  key={`trickle-${idx}`}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
+                    padding: '14px 0',
+                    borderBottom: '1px solid var(--border)',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 14,
+                      background: 'rgba(202,255,51,0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      fontSize: 18,
+                      color: 'var(--accent)',
+                    }}
+                  >
+                    ⟳
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="line-clamp-1" style={{ fontSize: 15, color: 'var(--text)', fontWeight: 500 }}>
+                      {label}
+                    </p>
+                    {tx.description && (
+                      <p className="line-clamp-1" style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{tx.description}</p>
+                    )}
+                    {!isActive && (
+                      <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 3 }}>
+                        {formatDate(tx.created_at)}
+                      </p>
+                    )}
+                  </div>
+                  <span
+                    className={isDebit ? 'amount-negative' : 'amount-positive'}
+                    style={{ fontSize: 15, fontWeight: 600, flexShrink: 0 }}
+                  >
+                    {isDebit ? '−' : '+'}{formatAUD(Math.abs(tx.amount_cents))}
+                  </span>
+                </div>
               )
             }
 
@@ -435,6 +622,9 @@ export default function BucketDetail() {
       )}
       {showTransfer && bucketId && (
         <TransferSheet initialFromBucketId={bucketId} onClose={() => setShowTransfer(false)} />
+      )}
+      {showTrickle && bucketId && (
+        <TrickleSheet bucketId={bucketId} trickle={trickle} onClose={() => setShowTrickle(false)} />
       )}
     </div>
   )

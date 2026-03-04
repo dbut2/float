@@ -41,6 +41,18 @@ type FloatBucketTransfer struct {
 	CreatedAt    time.Time
 }
 
+type FloatBucketTrickle struct {
+	TrickleID    uuid.UUID
+	FromBucketID uuid.UUID
+	ToBucketID   uuid.UUID
+	AmountCents  int64
+	Description  string
+	Period       string
+	StartDate    time.Time
+	EndDate      sql.NullTime
+	CreatedAt    time.Time
+}
+
 type FloatFcmToken struct {
 	UserID   uuid.UUID
 	FcmToken string

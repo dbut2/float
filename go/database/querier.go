@@ -17,21 +17,28 @@ type Querier interface {
 	CreateTransfer(ctx context.Context, arg CreateTransferParams) (FloatBucketTransfer, error)
 	DeleteBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) error
 	DeleteTransfer(ctx context.Context, transferID uuid.UUID, userID uuid.UUID) (int64, error)
+	DeleteTrickle(ctx context.Context, trickleID uuid.UUID, userID uuid.UUID) (int64, error)
 	DeleteUpTransaction(ctx context.Context, transactionID uuid.UUID) error
 	EnsureGeneralBucket(ctx context.Context, userID uuid.UUID) error
+	GetActiveTrickleByToBucketID(ctx context.Context, toBucketID uuid.UUID, userID uuid.UUID) (GetActiveTrickleByToBucketIDRow, error)
 	GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (GetBucketRow, error)
+	GetGeneralBucket(ctx context.Context, userID uuid.UUID) (FloatBucket, error)
 	GetTransaction(ctx context.Context, transactionID uuid.UUID, userID uuid.UUID) (FloatBucketLedger, error)
+	GetTricklesByBucketID(ctx context.Context, toBucketID uuid.UUID) ([]GetTricklesByBucketIDRow, error)
 	GetUserByEmail(ctx context.Context, email string) (FloatUser, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (FloatUser, error)
 	GetUserFCMTokens(ctx context.Context, userID uuid.UUID) ([]string, error)
 	GetUserToken(ctx context.Context, userID uuid.UUID) (sql.NullString, error)
 	GetUserWebhookSecret(ctx context.Context, userID uuid.UUID) (sql.NullString, error)
+	InsertTrickle(ctx context.Context, arg InsertTrickleParams) (FloatBucketTrickle, error)
 	ListBucketTransactions(ctx context.Context, bucketID uuid.UUID) ([]FloatBucketLedger, error)
 	ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBucketsRow, error)
 	ListTransactions(ctx context.Context, userID uuid.UUID) ([]FloatBucketLedger, error)
 	ListTransfers(ctx context.Context, userID uuid.UUID) ([]ListTransfersRow, error)
+	ListTrickles(ctx context.Context, userID uuid.UUID) ([]ListTricklesRow, error)
 	ReassignBucketTransactionsToGeneral(ctx context.Context, bucketID uuid.UUID) error
 	RegisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error
+	SetTrickleEndDate(ctx context.Context, trickleID uuid.UUID, endDate sql.NullTime, userID uuid.UUID) error
 	SetUserToken(ctx context.Context, userID uuid.UUID, upToken sql.NullString) error
 	SetUserWebhookSecret(ctx context.Context, userID uuid.UUID, webhookSecret sql.NullString) error
 	UnregisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error
