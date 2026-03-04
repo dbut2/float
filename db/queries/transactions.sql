@@ -40,3 +40,6 @@ WHERE transaction_id = $1;
 SELECT * FROM float.bucket_ledger
 WHERE bucket_id = $1
 ORDER BY created_at DESC;
+
+-- name: DeleteUpTransaction :exec
+DELETE FROM float.up_transactions WHERE transaction_id = $1;

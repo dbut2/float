@@ -2,14 +2,11 @@
 CREATE SCHEMA IF NOT EXISTS float;
 
 CREATE TABLE IF NOT EXISTS float.users (
-    user_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email      TEXT NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS float.user_tokens (
-    user_id  UUID PRIMARY KEY REFERENCES float.users (user_id) ON DELETE CASCADE,
-    up_token TEXT NOT NULL
+    user_id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email          TEXT NOT NULL UNIQUE,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    up_token       TEXT,
+    webhook_secret TEXT
 );
 
 CREATE TABLE IF NOT EXISTS float.buckets (
@@ -85,6 +82,5 @@ DROP TABLE IF EXISTS float.bucket_transfers;
 DROP TABLE IF EXISTS float.fcm_tokens;
 DROP TABLE IF EXISTS float.up_transactions;
 DROP TABLE IF EXISTS float.buckets;
-DROP TABLE IF EXISTS float.user_tokens;
 DROP TABLE IF EXISTS float.users;
 DROP SCHEMA IF EXISTS float;

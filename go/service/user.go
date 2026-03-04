@@ -39,19 +39,19 @@ func (s *UserService) GetUser(ctx context.Context, userID uuid.UUID) (User, erro
 }
 
 func (s *UserService) UpdateToken(ctx context.Context, userID uuid.UUID, token string) error {
-	return s.q.UpsertUserToken(ctx, userID, token)
+	return s.q.SetUserToken(ctx, userID, sql.NullString{String: token, Valid: true})
 }
 
 func (s *UserService) SyncTransactions(ctx context.Context, userID uuid.UUID) (int, error) {
-	token, err := s.q.GetUserToken(ctx, userID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return 0, ErrTokenNotSet
-	}
+	nullToken, err := s.q.GetUserToken(ctx, userID)
 	if err != nil {
 		return 0, err
 	}
+	if !nullToken.Valid {
+		return 0, ErrTokenNotSet
+	}
 
-	client, err := up.NewUpClient(token)
+	client, err := up.NewUpClient(nullToken.String)
 	if err != nil {
 		return 0, err
 	}
@@ -69,44 +69,12 @@ func (s *UserService) SyncTransactions(ctx context.Context, userID uuid.UUID) (i
 		}
 
 		for _, tx := range txs {
-			txID, err := uuid.Parse(tx.Id)
+			params, err := upTransactionToParams(userID, tx)
 			if err != nil {
 				continue
 			}
 
-			msg := ""
-			if tx.Attributes.Message != nil {
-				msg = *tx.Attributes.Message
-			}
-
-			var txType sql.NullString
-			if tx.Attributes.TransactionType != nil {
-				txType = sql.NullString{String: *tx.Attributes.TransactionType, Valid: true}
-			}
-
-			deepLinkURL := ""
-			if tx.Links != nil {
-				deepLinkURL = tx.Links.Self
-			}
-
-			rawJSON, err := json.Marshal(tx)
-			if err != nil {
-				return 0, err
-			}
-
-			inserted, err := s.q.UpsertUpTransaction(ctx, database.UpsertUpTransactionParams{
-				TransactionID:   txID,
-				UserID:          userID,
-				Description:     tx.Attributes.Description,
-				Message:         msg,
-				AmountCents:     int64(tx.Attributes.Amount.ValueInBaseUnits),
-				DisplayAmount:   tx.Attributes.Amount.Value,
-				CurrencyCode:    tx.Attributes.Amount.CurrencyCode,
-				CreatedAt:       tx.Attributes.CreatedAt,
-				TransactionType: txType,
-				DeepLinkUrl:     deepLinkURL,
-				RawJson:         rawJSON,
-			})
+			inserted, err := s.q.UpsertUpTransaction(ctx, params)
 			if err != nil {
 				return 0, err
 			}
@@ -118,4 +86,45 @@ func (s *UserService) SyncTransactions(ctx context.Context, userID uuid.UUID) (i
 	}
 
 	return count, nil
+}
+
+func upTransactionToParams(userID uuid.UUID, tx up.TransactionResource) (database.UpsertUpTransactionParams, error) {
+	txID, err := uuid.Parse(tx.Id)
+	if err != nil {
+		return database.UpsertUpTransactionParams{}, err
+	}
+
+	msg := ""
+	if tx.Attributes.Message != nil {
+		msg = *tx.Attributes.Message
+	}
+
+	var txType sql.NullString
+	if tx.Attributes.TransactionType != nil {
+		txType = sql.NullString{String: *tx.Attributes.TransactionType, Valid: true}
+	}
+
+	deepLinkURL := ""
+	if tx.Links != nil {
+		deepLinkURL = tx.Links.Self
+	}
+
+	rawJSON, err := json.Marshal(tx)
+	if err != nil {
+		return database.UpsertUpTransactionParams{}, err
+	}
+
+	return database.UpsertUpTransactionParams{
+		TransactionID:   txID,
+		UserID:          userID,
+		Description:     tx.Attributes.Description,
+		Message:         msg,
+		AmountCents:     int64(tx.Attributes.Amount.ValueInBaseUnits),
+		DisplayAmount:   tx.Attributes.Amount.Value,
+		CurrencyCode:    tx.Attributes.Amount.CurrencyCode,
+		CreatedAt:       tx.Attributes.CreatedAt,
+		TransactionType: txType,
+		DeepLinkUrl:     deepLinkURL,
+		RawJson:         rawJSON,
+	}, nil
 }

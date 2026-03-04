@@ -7,67 +7,103 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT user_id, email, created_at FROM float.users
+SELECT user_id, email, created_at, up_token, webhook_secret FROM float.users
 WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (FloatUser, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
 	var i FloatUser
-	err := row.Scan(&i.UserID, &i.Email, &i.CreatedAt)
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpToken,
+		&i.WebhookSecret,
+	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT user_id, email, created_at FROM float.users
+SELECT user_id, email, created_at, up_token, webhook_secret FROM float.users
 WHERE user_id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, userID uuid.UUID) (FloatUser, error) {
 	row := q.db.QueryRowContext(ctx, getUserByID, userID)
 	var i FloatUser
-	err := row.Scan(&i.UserID, &i.Email, &i.CreatedAt)
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpToken,
+		&i.WebhookSecret,
+	)
 	return i, err
 }
 
 const getUserToken = `-- name: GetUserToken :one
-SELECT up_token FROM float.user_tokens
-WHERE user_id = $1
+SELECT up_token FROM float.users WHERE user_id = $1
 `
 
-func (q *Queries) GetUserToken(ctx context.Context, userID uuid.UUID) (string, error) {
+func (q *Queries) GetUserToken(ctx context.Context, userID uuid.UUID) (sql.NullString, error) {
 	row := q.db.QueryRowContext(ctx, getUserToken, userID)
-	var up_token string
+	var up_token sql.NullString
 	err := row.Scan(&up_token)
 	return up_token, err
+}
+
+const getUserWebhookSecret = `-- name: GetUserWebhookSecret :one
+SELECT webhook_secret FROM float.users WHERE user_id = $1
+`
+
+func (q *Queries) GetUserWebhookSecret(ctx context.Context, userID uuid.UUID) (sql.NullString, error) {
+	row := q.db.QueryRowContext(ctx, getUserWebhookSecret, userID)
+	var webhook_secret sql.NullString
+	err := row.Scan(&webhook_secret)
+	return webhook_secret, err
+}
+
+const setUserToken = `-- name: SetUserToken :exec
+UPDATE float.users SET up_token = $2 WHERE user_id = $1
+`
+
+func (q *Queries) SetUserToken(ctx context.Context, userID uuid.UUID, upToken sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, setUserToken, userID, upToken)
+	return err
+}
+
+const setUserWebhookSecret = `-- name: SetUserWebhookSecret :exec
+UPDATE float.users SET webhook_secret = $2 WHERE user_id = $1
+`
+
+func (q *Queries) SetUserWebhookSecret(ctx context.Context, userID uuid.UUID, webhookSecret sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, setUserWebhookSecret, userID, webhookSecret)
+	return err
 }
 
 const upsertUser = `-- name: UpsertUser :one
 INSERT INTO float.users (email)
 VALUES ($1)
 ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-RETURNING user_id, email, created_at
+RETURNING user_id, email, created_at, up_token, webhook_secret
 `
 
 func (q *Queries) UpsertUser(ctx context.Context, email string) (FloatUser, error) {
 	row := q.db.QueryRowContext(ctx, upsertUser, email)
 	var i FloatUser
-	err := row.Scan(&i.UserID, &i.Email, &i.CreatedAt)
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpToken,
+		&i.WebhookSecret,
+	)
 	return i, err
-}
-
-const upsertUserToken = `-- name: UpsertUserToken :exec
-INSERT INTO float.user_tokens (user_id, up_token)
-VALUES ($1, $2)
-ON CONFLICT (user_id) DO UPDATE SET up_token = EXCLUDED.up_token
-`
-
-func (q *Queries) UpsertUserToken(ctx context.Context, userID uuid.UUID, upToken string) error {
-	_, err := q.db.ExecContext(ctx, upsertUserToken, userID, upToken)
-	return err
 }
