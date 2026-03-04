@@ -83,6 +83,23 @@ func (q *Queries) GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid
 	return i, err
 }
 
+const getGeneralBucket = `-- name: GetGeneralBucket :one
+SELECT bucket_id, user_id, name, is_general, created_at FROM float.buckets WHERE user_id = $1 AND is_general = TRUE
+`
+
+func (q *Queries) GetGeneralBucket(ctx context.Context, userID uuid.UUID) (FloatBucket, error) {
+	row := q.db.QueryRowContext(ctx, getGeneralBucket, userID)
+	var i FloatBucket
+	err := row.Scan(
+		&i.BucketID,
+		&i.UserID,
+		&i.Name,
+		&i.IsGeneral,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listBuckets = `-- name: ListBuckets :many
 SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
 FROM float.buckets b

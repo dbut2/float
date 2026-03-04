@@ -31,3 +31,6 @@ WHERE bucket_id = $1 AND user_id = $2;
 UPDATE float.up_transactions t
 SET bucket_id = (SELECT b2.bucket_id FROM float.buckets b1 JOIN float.buckets b2 ON b1.user_id = b2.user_id AND b2.is_general = TRUE WHERE b1.bucket_id = $1)
 WHERE t.bucket_id = $1;
+
+-- name: GetGeneralBucket :one
+SELECT * FROM float.buckets WHERE user_id = $1 AND is_general = TRUE;

@@ -209,3 +209,21 @@ func (s *DemoService) RegisterToken(_ context.Context, _ uuid.UUID, _ string) er
 func (s *DemoService) UnregisterToken(_ context.Context, _ uuid.UUID, _ string) error {
 	return nil
 }
+
+func (s *DemoService) ListTrickles(_ context.Context, _ uuid.UUID) ([]Trickle, error) {
+	return []Trickle{}, nil
+}
+
+func (s *DemoService) GetTrickle(_ context.Context, _, _ uuid.UUID) (Trickle, error) {
+	return Trickle{}, ErrNotFound
+}
+
+func (s *DemoService) UpsertTrickle(_ context.Context, trickle Trickle) (Trickle, error) {
+	trickle.TrickleID = uuid.New()
+	trickle.CreatedAt = time.Now()
+	return trickle, nil
+}
+
+func (s *DemoService) DeleteTrickle(_ context.Context, _, _ uuid.UUID) error {
+	return nil
+}

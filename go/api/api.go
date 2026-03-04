@@ -40,12 +40,20 @@ type PushService interface {
 	UnregisterToken(ctx context.Context, userID uuid.UUID, token string) error
 }
 
+type TrickleService interface {
+	ListTrickles(ctx context.Context, userID uuid.UUID) ([]service.Trickle, error)
+	GetTrickle(ctx context.Context, toBucketID, userID uuid.UUID) (service.Trickle, error)
+	UpsertTrickle(ctx context.Context, trickle service.Trickle) (service.Trickle, error)
+	DeleteTrickle(ctx context.Context, toBucketID, userID uuid.UUID) error
+}
+
 type API struct {
 	users        UserService
 	buckets      BucketService
 	transactions TransactionService
 	transfers    TransferService
 	push         PushService
+	trickles     TrickleService
 }
 
 func New(q database.Querier) *API {
@@ -55,6 +63,7 @@ func New(q database.Querier) *API {
 		transactions: service.NewTransactionService(q),
 		transfers:    service.NewTransferService(q),
 		push:         service.NewPushService(q),
+		trickles:     service.NewTrickleService(q),
 	}
 }
 
@@ -67,6 +76,7 @@ func NewDemo() (*API, uuid.UUID) {
 		transactions: demoService,
 		transfers:    demoService,
 		push:         demoService,
+		trickles:     demoService,
 	}, demoService.UserID()
 }
 
@@ -87,6 +97,11 @@ func (a *API) Register(r *gin.RouterGroup) {
 	r.GET("/transfers", a.listTransfers)
 	r.POST("/transfers", a.createTransfer)
 	r.DELETE("/transfers/:transferID", a.deleteTransfer)
+
+	r.GET("/trickles", a.listTrickles)
+	r.GET("/buckets/:bucketID/trickle", a.getTrickle)
+	r.PUT("/buckets/:bucketID/trickle", a.upsertTrickle)
+	r.DELETE("/buckets/:bucketID/trickle", a.deleteTrickle)
 
 	r.POST("/fcm-tokens", a.registerFCMToken)
 	r.DELETE("/fcm-tokens", a.unregisterFCMToken)
