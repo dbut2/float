@@ -213,7 +213,7 @@ func (s *DemoService) SyncTransactions(_ context.Context, _ uuid.UUID) (int, err
 }
 
 func (s *DemoService) GetTransactBalance(_ context.Context, _ uuid.UUID) (int64, error) {
-	return 0, nil
+	return 189234, nil
 }
 
 func (s *DemoService) ListBuckets(_ context.Context, _ uuid.UUID) ([]Bucket, error) {
