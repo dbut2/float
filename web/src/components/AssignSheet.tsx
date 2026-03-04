@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus } from 'lucide-react'
 import { api, formatAUD, type Transaction } from '../lib/api'
 import { useDraggableSheet } from '../hooks/useDraggableSheet'
 import { useMediaQuery } from '../hooks/useMediaQuery'
@@ -212,8 +213,9 @@ export default function AssignSheet({ transaction, onClose }: Props) {
                 borderRadius: '50%',
                 border: '1.5px dashed var(--border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, color: 'var(--text-3)',
-              }}>+</span>
+              }}>
+                <Plus size={16} color="var(--text-3)" strokeWidth={1.75} />
+              </span>
               <span style={{ fontFamily: 'DM Sans', fontSize: 15 }}>New bucket</span>
             </button>
           )}

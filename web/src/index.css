@@ -27,7 +27,14 @@ html, body {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea, select, [contenteditable] {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 body {

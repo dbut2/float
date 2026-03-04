@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { ChevronRight, Plus } from 'lucide-react'
 import { api, formatAUD } from '../lib/api'
 import { useDraggableSheet } from '../hooks/useDraggableSheet'
 import { useMediaQuery } from '../hooks/useMediaQuery'
@@ -53,7 +54,7 @@ function BucketCard({
           {isNeg ? '−' : ''}{formatAUD(balanceCents)}
         </p>
       </div>
-      <span style={{ fontSize: 20, color: 'var(--text-3)', flexShrink: 0 }}>→</span>
+      <ChevronRight size={20} color="var(--text-3)" strokeWidth={1.75} style={{ flexShrink: 0 }} />
     </button>
   )
 }
@@ -139,12 +140,10 @@ export default function Dashboard() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 18,
-                  color: 'var(--text-3)',
                   flexShrink: 0,
                 }}
               >
-                +
+                <Plus size={16} color="var(--text-3)" strokeWidth={1.75} />
               </span>
               <span style={{ fontFamily: 'DM Sans', fontSize: 15, color: 'var(--text-2)' }}>
                 New bucket

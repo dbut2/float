@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeftRight, Plus, Trash2 } from 'lucide-react'
 import { api, formatAUD, formatDate } from '../lib/api'
 import TransferSheet from '../components/TransferSheet'
 
@@ -42,13 +43,9 @@ export default function Transfers() {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: 'var(--accent)',
-            fontSize: 20,
-            fontWeight: 300,
-            lineHeight: 1,
           }}
         >
-          +
+          <Plus size={20} color="var(--accent)" strokeWidth={1.75} />
         </button>
       </div>
 
@@ -59,7 +56,9 @@ export default function Transfers() {
           ))
         ) : transfers.length === 0 ? (
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-2)' }}>
-            <p style={{ fontSize: 32, marginBottom: 10 }}>⇄</p>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+              <ArrowLeftRight size={32} color="var(--text-2)" strokeWidth={1.75} />
+            </div>
             <p style={{ fontFamily: 'DM Sans', fontSize: 15 }}>No transfers yet</p>
           </div>
         ) : (
@@ -104,11 +103,10 @@ export default function Transfers() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  fontSize: 14,
                   flexShrink: 0,
                 }}
               >
-                🗑
+                <Trash2 size={14} strokeWidth={1.75} color="var(--red)" />
               </button>
             </div>
           ))

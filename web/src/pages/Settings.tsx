@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Check, RefreshCw, X } from 'lucide-react'
 import { api } from '../lib/api'
 
 function Section({
@@ -193,13 +194,13 @@ export default function Settings() {
             </button>
           </div>
           {tokenStatus === 'ok' && (
-            <p style={{ fontSize: 12, color: 'var(--green)', marginTop: 8, fontFamily: 'DM Sans' }}>
-              ✓ Token saved
+            <p style={{ fontSize: 12, color: 'var(--green)', marginTop: 8, fontFamily: 'DM Sans', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Check size={12} strokeWidth={1.75} /> Token saved
             </p>
           )}
           {tokenStatus === 'fail' && (
-            <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 8, fontFamily: 'DM Sans' }}>
-              ✗ Failed to save token
+            <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 8, fontFamily: 'DM Sans', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <X size={12} strokeWidth={1.75} /> Failed to save token
             </p>
           )}
         </div>
@@ -217,11 +218,11 @@ export default function Settings() {
                 Syncing…
               </span>
             ) : sync.isSuccess ? (
-              <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: 'var(--green)' }}>
-                Done ✓
+              <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: 'var(--green)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                Done <Check size={13} strokeWidth={1.75} />
               </span>
             ) : (
-              <span style={{ color: 'var(--text-2)', fontSize: 18 }}>↻</span>
+              <RefreshCw size={18} color="var(--text-2)" strokeWidth={1.75} />
             )
           }
         />
