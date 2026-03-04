@@ -108,25 +108,6 @@ export default function AssignSheet({ transaction, onClose }: Props) {
           >
             {transaction.amount_cents < 0 ? '−' : '+'}{formatAUD(transaction.amount_cents)}
           </p>
-          {transaction.deep_link_url && (
-            <a
-              href={transaction.deep_link_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                marginTop: 8,
-                fontSize: 13,
-                color: 'var(--accent)',
-                fontFamily: 'DM Sans',
-                textDecoration: 'none',
-              }}
-            >
-              View in Up ↗
-            </a>
-          )}
         </div>
 
         {/* Bucket list */}

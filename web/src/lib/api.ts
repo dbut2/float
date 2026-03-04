@@ -15,7 +15,6 @@ export interface Transaction {
   created_at: string
   is_transaction: boolean
   transaction_type: string | null
-  deep_link_url: string
   raw_json: unknown
 }
 
