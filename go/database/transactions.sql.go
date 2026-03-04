@@ -35,7 +35,7 @@ func (q *Queries) DeleteUpTransaction(ctx context.Context, transactionID uuid.UU
 }
 
 const getTransaction = `-- name: GetTransaction :one
-SELECT l.bucket_id, l.amount_cents, l.created_at, l.is_transaction, l.transaction_id FROM float.bucket_ledger l
+SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.display_amount, l.currency_code, l.created_at, l.deep_link_url, l.is_transaction FROM float.bucket_ledger l
 JOIN float.buckets b USING (bucket_id)
 WHERE l.transaction_id = $1 AND b.user_id = $2
 `
@@ -44,17 +44,22 @@ func (q *Queries) GetTransaction(ctx context.Context, transactionID uuid.UUID, u
 	row := q.db.QueryRowContext(ctx, getTransaction, transactionID, userID)
 	var i FloatBucketLedger
 	err := row.Scan(
-		&i.BucketID,
-		&i.AmountCents,
-		&i.CreatedAt,
-		&i.IsTransaction,
 		&i.TransactionID,
+		&i.BucketID,
+		&i.Description,
+		&i.Message,
+		&i.AmountCents,
+		&i.DisplayAmount,
+		&i.CurrencyCode,
+		&i.CreatedAt,
+		&i.DeepLinkUrl,
+		&i.IsTransaction,
 	)
 	return i, err
 }
 
 const listBucketTransactions = `-- name: ListBucketTransactions :many
-SELECT bucket_id, amount_cents, created_at, is_transaction, transaction_id FROM float.bucket_ledger
+SELECT transaction_id, bucket_id, description, message, amount_cents, display_amount, currency_code, created_at, deep_link_url, is_transaction FROM float.bucket_ledger
 WHERE bucket_id = $1
 ORDER BY created_at DESC
 `
@@ -69,11 +74,16 @@ func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID
 	for rows.Next() {
 		var i FloatBucketLedger
 		if err := rows.Scan(
-			&i.BucketID,
-			&i.AmountCents,
-			&i.CreatedAt,
-			&i.IsTransaction,
 			&i.TransactionID,
+			&i.BucketID,
+			&i.Description,
+			&i.Message,
+			&i.AmountCents,
+			&i.DisplayAmount,
+			&i.CurrencyCode,
+			&i.CreatedAt,
+			&i.DeepLinkUrl,
+			&i.IsTransaction,
 		); err != nil {
 			return nil, err
 		}
@@ -89,7 +99,7 @@ func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID
 }
 
 const listTransactions = `-- name: ListTransactions :many
-SELECT l.bucket_id, l.amount_cents, l.created_at, l.is_transaction, l.transaction_id FROM float.bucket_ledger l
+SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.display_amount, l.currency_code, l.created_at, l.deep_link_url, l.is_transaction FROM float.bucket_ledger l
 JOIN float.buckets b USING (bucket_id)
 WHERE b.user_id = $1
 ORDER BY l.created_at DESC
@@ -105,11 +115,16 @@ func (q *Queries) ListTransactions(ctx context.Context, userID uuid.UUID) ([]Flo
 	for rows.Next() {
 		var i FloatBucketLedger
 		if err := rows.Scan(
-			&i.BucketID,
-			&i.AmountCents,
-			&i.CreatedAt,
-			&i.IsTransaction,
 			&i.TransactionID,
+			&i.BucketID,
+			&i.Description,
+			&i.Message,
+			&i.AmountCents,
+			&i.DisplayAmount,
+			&i.CurrencyCode,
+			&i.CreatedAt,
+			&i.DeepLinkUrl,
+			&i.IsTransaction,
 		); err != nil {
 			return nil, err
 		}

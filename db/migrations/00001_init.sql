@@ -49,31 +49,42 @@ CREATE TABLE IF NOT EXISTS float.bucket_transfers (
 );
 
 CREATE OR REPLACE VIEW float.bucket_ledger AS
-    SELECT bucket_id,
+    SELECT transaction_id,
+           bucket_id,
+           description,
+           message,
            amount_cents,
+           display_amount,
+           currency_code,
            created_at,
-           TRUE AS is_transaction,
-           transaction_id
+           deep_link_url,
+           TRUE AS is_transaction
     FROM float.up_transactions
     WHERE transaction_type IS DISTINCT FROM 'Transfer'
       AND transaction_type IS DISTINCT FROM 'Round Up'
 
     UNION ALL
 
-    SELECT to_bucket_id AS bucket_id,
+    SELECT NULL as transaction_id,
+           to_bucket_id AS bucket_id,
+           note AS description,
            amount_cents,
+           NULL AS display_amount, --todo
+           'AUD' AS currency_code,
            created_at,
-           FALSE AS is_transaction,
-           NULL AS transaction_id
+           FALSE AS is_transaction
     FROM float.bucket_transfers
 
     UNION ALL
 
-    SELECT from_bucket_id AS bucket_id,
-           -amount_cents AS amount_cents,
+    SELECT NULL as transaction_id,
+           from_bucket_id AS bucket_id,
+           note AS description,
+           -amount_cents,
+           NULL AS display_amount, --todo
+           'AUD' AS currency_code,
            created_at,
-           FALSE AS is_transaction,
-           NULL AS transaction_id
+           FALSE AS is_transaction
     FROM float.bucket_transfers;
 
 -- +goose Down

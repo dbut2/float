@@ -21,11 +21,16 @@ type FloatBucket struct {
 }
 
 type FloatBucketLedger struct {
-	BucketID      uuid.UUID
-	AmountCents   int64
-	CreatedAt     time.Time
-	IsTransaction bool
 	TransactionID uuid.UUID
+	BucketID      uuid.UUID
+	Description   string
+	Message       string
+	AmountCents   int64
+	DisplayAmount string
+	CurrencyCode  string
+	CreatedAt     time.Time
+	DeepLinkUrl   string
+	IsTransaction bool
 }
 
 type FloatBucketTransfer struct {
