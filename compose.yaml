@@ -5,6 +5,7 @@ services:
       - "8080:8080"
     environment:
       - DEMO_MODE=true
+      - BASE_URL=http://localhost:8080
 #      - DATABASE_DSN=postgres://float:float@db:5432/float?sslmode=disable
 #    depends_on:
 #      db:
