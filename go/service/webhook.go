@@ -21,33 +21,33 @@ func NewWebhookService(q database.Querier) *WebhookService {
 	return &WebhookService{q: q}
 }
 
-func (s *WebhookService) EnsureWebhook(ctx context.Context, userID uuid.UUID, baseURL string) error {
+func (s *WebhookService) EnsureWebhook(ctx context.Context, userID uuid.UUID, baseURL string) (bool, error) {
 	secret, err := s.q.GetUserWebhookSecret(ctx, userID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if secret.Valid {
-		return nil
+		return true, nil
 	}
 
 	nullToken, err := s.q.GetUserToken(ctx, userID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if !nullToken.Valid {
-		return nil
+		return false, nil
 	}
 
 	client, err := up.NewUpClient(nullToken.String)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	webhookURL := baseURL + "/webhook/up/" + userID.String()
 
 	existing, err := client.ListWebhooks(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 	for _, wh := range existing {
 		if strings.HasPrefix(wh.Attributes.Url, baseURL+"/webhook/up/") {
@@ -59,10 +59,13 @@ func (s *WebhookService) EnsureWebhook(ctx context.Context, userID uuid.UUID, ba
 
 	_, secretKey, err := client.RegisterWebhook(ctx, webhookURL)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return s.q.SetUserWebhookSecret(ctx, userID, sql.NullString{String: secretKey, Valid: true})
+	if err := s.q.SetUserWebhookSecret(ctx, userID, sql.NullString{String: secretKey, Valid: true}); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (s *WebhookService) GetWebhookSecret(ctx context.Context, userID uuid.UUID) (string, error) {
