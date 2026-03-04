@@ -25,6 +25,15 @@ func (q *Queries) AssignTransactionToBucket(ctx context.Context, transactionID u
 	return err
 }
 
+const deleteUpTransaction = `-- name: DeleteUpTransaction :exec
+DELETE FROM float.up_transactions WHERE transaction_id = $1
+`
+
+func (q *Queries) DeleteUpTransaction(ctx context.Context, transactionID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteUpTransaction, transactionID)
+	return err
+}
+
 const getTransaction = `-- name: GetTransaction :one
 SELECT l.bucket_id, l.amount_cents, l.created_at, l.is_transaction, l.transaction_id FROM float.bucket_ledger l
 JOIN float.buckets b USING (bucket_id)

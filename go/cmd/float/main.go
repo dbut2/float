@@ -14,12 +14,13 @@ import (
 	"dbut.dev/float/go/database"
 	"dbut.dev/float/go/middleware"
 	"dbut.dev/float/go/static"
+	"dbut.dev/float/go/webhook"
 )
 
 func main() {
-	apiHandler, auth := setup()
-
 	r := gin.Default()
+	apiHandler, auth := setup(r)
+
 	apis := r.Group("/api")
 	apis.Use(auth)
 	apiHandler.Register(apis)
@@ -32,7 +33,7 @@ func main() {
 	}
 }
 
-func setup() (*api.API, gin.HandlerFunc) {
+func setup(r *gin.Engine) (*api.API, gin.HandlerFunc) {
 	if os.Getenv("DEMO_MODE") == "true" {
 		apiHandler, userID := api.NewDemo()
 		return apiHandler, middleware.DemoAuth(userID)
@@ -48,7 +49,10 @@ func setup() (*api.API, gin.HandlerFunc) {
 
 	runMigrations(db)
 	queries := database.New(db)
-	return api.New(queries), middleware.Auth(queries)
+
+	webhook.New(queries).Register(r.Group("/webhook"))
+
+	return api.New(queries), middleware.Middleware(queries, os.Getenv("BASE_URL"))
 }
 
 func runMigrations(db *sql.DB) {

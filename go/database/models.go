@@ -57,12 +57,9 @@ type FloatUpTransaction struct {
 }
 
 type FloatUser struct {
-	UserID    uuid.UUID
-	Email     string
-	CreatedAt time.Time
-}
-
-type FloatUserToken struct {
-	UserID  uuid.UUID
-	UpToken string
+	UserID        uuid.UUID
+	Email         string
+	CreatedAt     time.Time
+	UpToken       sql.NullString
+	WebhookSecret sql.NullString
 }

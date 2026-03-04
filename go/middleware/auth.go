@@ -8,9 +8,11 @@ import (
 	"github.com/google/uuid"
 
 	"dbut.dev/float/go/database"
+	"dbut.dev/float/go/service"
 )
 
-func Auth(queries database.Querier) gin.HandlerFunc {
+func Middleware(queries database.Querier, baseURL string) gin.HandlerFunc {
+	webhookSvc := service.NewWebhookService(queries)
 	return func(c *gin.Context) {
 		email := c.GetHeader("Cf-Access-Authenticated-User-Email")
 
@@ -32,6 +34,13 @@ func Auth(queries database.Querier) gin.HandlerFunc {
 		}
 
 		c.Set("user_id", user.UserID)
+
+		if baseURL != "" {
+			if err := webhookSvc.EnsureWebhook(c.Request.Context(), user.UserID, baseURL); err != nil {
+				log.Printf("failed to ensure webhook for user %s: %v", user.UserID, err)
+			}
+		}
+
 		c.Next()
 	}
 }
