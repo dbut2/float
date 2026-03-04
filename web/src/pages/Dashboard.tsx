@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Plus } from 'lucide-react'
-import { api, formatAUD } from '../lib/api'
+import { ChevronRight, GripVertical, Plus } from 'lucide-react'
+import { type Bucket, api, formatAUD } from '../lib/api'
 import { useDraggableSheet } from '../hooks/useDraggableSheet'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 
@@ -10,16 +10,18 @@ function BucketCard({
   name,
   balanceCents,
   onClick,
+  dragHandle,
+  isDragging,
 }: {
   name: string
   balanceCents: number
   onClick: () => void
+  dragHandle?: React.ReactNode
+  isDragging?: boolean
 }) {
   const isNeg = balanceCents < 0
   return (
-    <button
-      onClick={onClick}
-      className="pressable"
+    <div
       style={{
         width: '100%',
         background: 'var(--surface)',
@@ -29,33 +31,50 @@ function BucketCard({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        cursor: 'pointer',
-        textAlign: 'left',
         marginBottom: 12,
+        opacity: isDragging ? 0.5 : 1,
+        transition: 'opacity 0.1s',
       }}
     >
-      <div>
-        <p
-          style={{
-            fontFamily: 'Syne',
-            fontWeight: 700,
-            fontSize: 13,
-            letterSpacing: '0.04em',
-            color: 'var(--text-2)',
-            marginBottom: 10,
-          }}
-        >
-          {name}
-        </p>
-        <p
-          className={isNeg ? 'amount-negative' : 'amount-neutral'}
-          style={{ fontSize: 28, fontWeight: 600, lineHeight: 1 }}
-        >
-          {isNeg ? '−' : ''}{formatAUD(balanceCents)}
-        </p>
-      </div>
-      <ChevronRight size={20} color="var(--text-3)" strokeWidth={1.75} style={{ flexShrink: 0 }} />
-    </button>
+      {dragHandle}
+      <button
+        onClick={onClick}
+        className="pressable"
+        style={{
+          flex: 1,
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          textAlign: 'left',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div>
+          <p
+            style={{
+              fontFamily: 'Syne',
+              fontWeight: 700,
+              fontSize: 13,
+              letterSpacing: '0.04em',
+              color: 'var(--text-2)',
+              marginBottom: 10,
+            }}
+          >
+            {name}
+          </p>
+          <p
+            className={isNeg ? 'amount-negative' : 'amount-neutral'}
+            style={{ fontSize: 28, fontWeight: 600, lineHeight: 1 }}
+          >
+            {isNeg ? '−' : ''}{formatAUD(balanceCents)}
+          </p>
+        </div>
+        <ChevronRight size={20} color="var(--text-3)" strokeWidth={1.75} style={{ flexShrink: 0 }} />
+      </button>
+    </div>
   )
 }
 
@@ -64,6 +83,9 @@ export default function Dashboard() {
   const qc = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
+  const [orderedBuckets, setOrderedBuckets] = useState<Bucket[]>([])
+  const dragState = useRef<{ dragIndex: number; startY: number; pointerY: number } | null>(null)
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
 
   const { data: buckets = [], isLoading } = useQuery({
     queryKey: ['buckets'],
@@ -73,6 +95,17 @@ export default function Dashboard() {
   const { data: transactBalance } = useQuery({
     queryKey: ['transact-balance'],
     queryFn: api.getTransactBalance,
+  })
+
+  useEffect(() => {
+    setOrderedBuckets(buckets)
+  }, [buckets])
+
+  const reorder = useMutation({
+    mutationFn: (ids: string[]) => api.reorderBuckets(ids),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['buckets'] })
+    },
   })
 
   const create = useMutation({
@@ -88,6 +121,41 @@ export default function Dashboard() {
   const handleCreateClose = () => { setShowCreate(false); setNewName('') }
   const { handleRef: createHandleRef, sheetStyle: createSheetStyle, backdropStyle: createBackdropStyle, onAnimationEnd: createOnAnimationEnd } = useDraggableSheet({ onClose: handleCreateClose, isOpen: showCreate })
 
+  function onDragHandlePointerDown(e: React.PointerEvent, index: number) {
+    e.preventDefault()
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    dragState.current = { dragIndex: index, startY: e.clientY, pointerY: e.clientY }
+    setDraggingIndex(index)
+  }
+
+  function onListPointerMove(e: React.PointerEvent) {
+    if (!dragState.current) return
+    dragState.current.pointerY = e.clientY
+    const dy = e.clientY - dragState.current.startY
+    const cardHeight = 112 // approximate card height + margin
+    const shift = Math.round(dy / cardHeight)
+    if (shift === 0) return
+    const from = dragState.current.dragIndex
+    const to = Math.max(0, Math.min(orderedBuckets.length - 1, from + shift))
+    if (to === from) return
+    setOrderedBuckets(prev => {
+      const next = [...prev]
+      const [item] = next.splice(from, 1)
+      next.splice(to, 0, item)
+      return next
+    })
+    dragState.current.dragIndex = to
+    dragState.current.startY = e.clientY
+    setDraggingIndex(to)
+  }
+
+  function onListPointerUp() {
+    if (!dragState.current) return
+    dragState.current = null
+    setDraggingIndex(null)
+    reorder.mutate(orderedBuckets.map(b => b.bucket_id))
+  }
+
   return (
     <div style={{ padding: '24px 20px', minHeight: '100%' }}>
       <div className="animate-fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, opacity: 0 }}>
@@ -102,7 +170,12 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="animate-fade-up" style={{ opacity: 0 }}>
+      <div
+        className="animate-fade-up"
+        style={{ opacity: 0 }}
+        onPointerMove={onListPointerMove}
+        onPointerUp={onListPointerUp}
+      >
         {isLoading ? (
           <>
             {Array.from({ length: 3 }).map((_, i) => (
@@ -115,12 +188,29 @@ export default function Dashboard() {
           </>
         ) : (
           <>
-            {buckets.map((bucket) => (
+            {orderedBuckets.map((bucket, index) => (
               <BucketCard
                 key={bucket.bucket_id}
                 name={bucket.name}
                 balanceCents={bucket.balance_cents}
                 onClick={() => navigate(`/buckets/${bucket.bucket_id}`)}
+                isDragging={draggingIndex === index}
+                dragHandle={
+                  <span
+                    onPointerDown={(e) => onDragHandlePointerDown(e, index)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      paddingRight: 12,
+                      cursor: 'grab',
+                      touchAction: 'none',
+                      flexShrink: 0,
+                      color: 'var(--text-3)',
+                    }}
+                  >
+                    <GripVertical size={18} strokeWidth={1.75} />
+                  </span>
+                }
               />
             ))}
             {/* Add bucket — greyed ghost card at bottom */}

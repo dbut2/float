@@ -302,6 +302,10 @@ func (s *DemoService) DeleteTrickle(_ context.Context, _, _ uuid.UUID) error {
 	return nil
 }
 
+func (s *DemoService) ReorderBuckets(_ context.Context, _ uuid.UUID, _ []uuid.UUID) error {
+	return nil
+}
+
 func (s *DemoService) ListRules(_ context.Context, _ uuid.UUID) ([]Rule, error) {
 	return s.rules, nil
 }

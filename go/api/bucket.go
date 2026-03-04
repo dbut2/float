@@ -85,6 +85,25 @@ func (a *API) deleteBucket(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (a *API) reorderBuckets(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
+	var body struct {
+		BucketIDs []uuid.UUID `json:"bucket_ids"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := a.buckets.ReorderBuckets(c.Request.Context(), userID, body.BucketIDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
 func (a *API) listBucketTransactions(c *gin.Context) {
 	bucketID, err := uuid.Parse(c.Param("bucketID"))
 	if err != nil {
