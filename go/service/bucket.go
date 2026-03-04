@@ -131,26 +131,27 @@ func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID uui
 	now := time.Now()
 	for _, r := range trickleRows {
 		t := dbTrickleToService(r.TrickleID, r.FromBucketID, r.FromBucketName, r.ToBucketID, r.ToBucketName, r.AmountCents, r.Description, r.Period, r.StartDate, r.EndDate, r.CreatedAt)
-		var amount int64
-		if t.ToBucketID == bucketID {
-			amount = trickleAmount(t, now)
-		} else if t.FromBucketID == bucketID {
-			amount = -trickleAmount(t, now)
-		} else {
-			continue
-		}
 		var createdAt time.Time
 		if t.EndDate != nil && t.EndDate.Before(now) {
 			createdAt = *t.EndDate
 		} else {
 			createdAt = now
 		}
-		txns = append(txns, Transaction{
-			BucketID:    bucketID,
-			Description: t.Description,
-			AmountCents: amount,
-			CreatedAt:   createdAt,
-		})
+		if t.ToBucketID == bucketID {
+			txns = append(txns, Transaction{
+				BucketID:    bucketID,
+				Description: "Trickle from " + t.FromBucketName,
+				AmountCents: trickleAmount(t, now),
+				CreatedAt:   createdAt,
+			})
+		} else if t.FromBucketID == bucketID {
+			txns = append(txns, Transaction{
+				BucketID:    bucketID,
+				Description: "Trickle to " + t.ToBucketName,
+				AmountCents: -trickleAmount(t, now),
+				CreatedAt:   createdAt,
+			})
+		}
 	}
 
 	sort.Slice(txns, func(i, j int) bool {

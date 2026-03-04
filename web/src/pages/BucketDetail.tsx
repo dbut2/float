@@ -390,7 +390,7 @@ export default function BucketDetail() {
             if (item.kind === 'trickle') {
               const tx = item.tx
               const isDebit = tx.amount_cents < 0
-              const label = isDebit ? `Trickle to ${bucket?.name ?? ''}` : `Trickle from General`
+              const label = tx.description
               const txDate = new Date(tx.created_at)
               const isActive = Math.abs(Date.now() - txDate.getTime()) < 300000
               return (
