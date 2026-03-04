@@ -66,9 +66,9 @@ CREATE OR REPLACE VIEW float.bucket_ledger AS
     SELECT NULL as transaction_id,
            to_bucket_id AS bucket_id,
            note AS description,
-           NULL AS message,
+           '' AS message,
            amount_cents,
-           NULL AS display_amount, --todo
+           '' AS display_amount, --todo
            'AUD' AS currency_code,
            created_at,
            FALSE AS is_transaction
@@ -79,9 +79,9 @@ CREATE OR REPLACE VIEW float.bucket_ledger AS
     SELECT NULL as transaction_id,
            from_bucket_id AS bucket_id,
            note AS description,
-           NULL AS message,
+           '' AS message,
            -amount_cents,
-           NULL AS display_amount, --todo
+           '' AS display_amount, --todo
            'AUD' AS currency_code,
            created_at,
            FALSE AS is_transaction

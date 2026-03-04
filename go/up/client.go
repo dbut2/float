@@ -79,6 +79,20 @@ func (c *UpClient) ListAccounts(ctx context.Context) ([]AccountResource, error) 
 	})
 }
 
+func (c *UpClient) GetTransactAccount(ctx context.Context) (*AccountResource, error) {
+	accounts, err := c.ListAccounts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range accounts {
+		if a.Attributes.AccountType == "TRANSACTIONAL" {
+			acct := a
+			return &acct, nil
+		}
+	}
+	return nil, fmt.Errorf("no transactional account found")
+}
+
 func (c *UpClient) ListTransactions(ctx context.Context, accountID string) ([]TransactionResource, error) {
 	url := ServerUrlHttpsapiUpComAuapiv1 + "/transactions"
 	if accountID != "" {

@@ -14,8 +14,10 @@ import (
 type Querier interface {
 	AssignTransactionToBucket(ctx context.Context, transactionID uuid.UUID, bucketID uuid.UUID) error
 	CreateBucket(ctx context.Context, userID uuid.UUID, name string) (FloatBucket, error)
+	CreateRule(ctx context.Context, arg CreateRuleParams) (FloatRule, error)
 	CreateTransfer(ctx context.Context, arg CreateTransferParams) (FloatBucketTransfer, error)
 	DeleteBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) error
+	DeleteRule(ctx context.Context, ruleID uuid.UUID, userID uuid.UUID) error
 	DeleteTransfer(ctx context.Context, transferID uuid.UUID, userID uuid.UUID) (int64, error)
 	DeleteTrickle(ctx context.Context, trickleID uuid.UUID, userID uuid.UUID) (int64, error)
 	DeleteUpTransaction(ctx context.Context, transactionID uuid.UUID) error
@@ -33,15 +35,19 @@ type Querier interface {
 	InsertTrickle(ctx context.Context, arg InsertTrickleParams) (FloatBucketTrickle, error)
 	ListBucketTransactions(ctx context.Context, bucketID uuid.UUID) ([]FloatBucketLedger, error)
 	ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBucketsRow, error)
+	ListRulesByBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) ([]ListRulesByBucketRow, error)
+	ListRulesForUser(ctx context.Context, userID uuid.UUID) ([]ListRulesForUserRow, error)
 	ListTransactions(ctx context.Context, userID uuid.UUID) ([]FloatBucketLedger, error)
 	ListTransfers(ctx context.Context, userID uuid.UUID) ([]ListTransfersRow, error)
 	ListTrickles(ctx context.Context, userID uuid.UUID) ([]ListTricklesRow, error)
+	ListUpTransactionsByBucketID(ctx context.Context, bucketID uuid.UUID) ([]FloatUpTransaction, error)
 	ReassignBucketTransactionsToGeneral(ctx context.Context, bucketID uuid.UUID) error
 	RegisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error
 	SetTrickleEndDate(ctx context.Context, trickleID uuid.UUID, endDate sql.NullTime, userID uuid.UUID) error
 	SetUserToken(ctx context.Context, userID uuid.UUID, upToken sql.NullString) error
 	SetUserWebhookSecret(ctx context.Context, userID uuid.UUID, webhookSecret sql.NullString) error
 	UnregisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error
+	UpdateRule(ctx context.Context, arg UpdateRuleParams) (FloatRule, error)
 	UpsertUpTransaction(ctx context.Context, arg UpsertUpTransactionParams) (bool, error)
 	UpsertUser(ctx context.Context, email string) (FloatUser, error)
 }

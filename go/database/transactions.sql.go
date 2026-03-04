@@ -140,11 +140,11 @@ const upsertUpTransaction = `-- name: UpsertUpTransaction :one
 INSERT INTO float.up_transactions (
     transaction_id, bucket_id, description, message,
     amount_cents, display_amount, currency_code, created_at, transaction_type,
-    raw_json
+    raw_json, category_id
 ) VALUES (
     $1,
     (SELECT bucket_id FROM float.buckets WHERE user_id = $2 AND is_general = TRUE),
-    $3, $4, $5, $6, $7, $8, $9, $10
+    $3, $4, $5, $6, $7, $8, $9, $10, $11
 )
 ON CONFLICT (transaction_id) DO UPDATE SET
     description = EXCLUDED.description,
@@ -154,7 +154,8 @@ ON CONFLICT (transaction_id) DO UPDATE SET
     currency_code = EXCLUDED.currency_code,
     created_at = EXCLUDED.created_at,
     transaction_type = EXCLUDED.transaction_type,
-    raw_json = EXCLUDED.raw_json
+    raw_json = EXCLUDED.raw_json,
+    category_id = EXCLUDED.category_id
 RETURNING (xmax = 0) AS inserted
 `
 
@@ -169,6 +170,7 @@ type UpsertUpTransactionParams struct {
 	CreatedAt       time.Time
 	TransactionType sql.NullString
 	RawJson         json.RawMessage
+	CategoryID      sql.NullString
 }
 
 func (q *Queries) UpsertUpTransaction(ctx context.Context, arg UpsertUpTransactionParams) (bool, error) {
@@ -183,6 +185,7 @@ func (q *Queries) UpsertUpTransaction(ctx context.Context, arg UpsertUpTransacti
 		arg.CreatedAt,
 		arg.TransactionType,
 		arg.RawJson,
+		arg.CategoryID,
 	)
 	var inserted bool
 	err := row.Scan(&inserted)

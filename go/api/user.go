@@ -45,6 +45,22 @@ func (a *API) putUserToken(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (a *API) getTransactBalance(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
+	balance, err := a.users.GetTransactBalance(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, service.ErrTokenNotSet) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "no token set"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"balance_cents": balance})
+}
+
 func (a *API) postUserSync(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 

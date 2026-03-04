@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -40,6 +41,28 @@ func (s *UserService) GetUser(ctx context.Context, userID uuid.UUID) (User, erro
 
 func (s *UserService) UpdateToken(ctx context.Context, userID uuid.UUID, token string) error {
 	return s.q.SetUserToken(ctx, userID, sql.NullString{String: token, Valid: true})
+}
+
+func (s *UserService) GetTransactBalance(ctx context.Context, userID uuid.UUID) (int64, error) {
+	nullToken, err := s.q.GetUserToken(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+	if !nullToken.Valid {
+		return 0, ErrTokenNotSet
+	}
+
+	client, err := up.NewUpClient(nullToken.String)
+	if err != nil {
+		return 0, err
+	}
+
+	acct, err := client.GetTransactAccount(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return int64(acct.Attributes.Balance.ValueInBaseUnits), nil
 }
 
 func (s *UserService) SyncTransactions(ctx context.Context, userID uuid.UUID) (int, error) {
@@ -81,6 +104,9 @@ func (s *UserService) SyncTransactions(ctx context.Context, userID uuid.UUID) (i
 
 			if inserted {
 				count++
+				if _, err := applyRules(ctx, s.q, userID, params.TransactionID, params.Description, params.AmountCents, params.TransactionType, params.CategoryID); err != nil {
+					log.Printf("applyRules for tx %s: %v", params.TransactionID, err)
+				}
 			}
 		}
 	}
@@ -104,6 +130,11 @@ func upTransactionToParams(userID uuid.UUID, tx up.TransactionResource) (databas
 		txType = sql.NullString{String: *tx.Attributes.TransactionType, Valid: true}
 	}
 
+	var categoryID sql.NullString
+	if tx.Relationships.Category.Data != nil {
+		categoryID = sql.NullString{String: tx.Relationships.Category.Data.Id, Valid: true}
+	}
+
 	rawJSON, err := json.Marshal(tx)
 	if err != nil {
 		return database.UpsertUpTransactionParams{}, err
@@ -120,5 +151,6 @@ func upTransactionToParams(userID uuid.UUID, tx up.TransactionResource) (databas
 		CreatedAt:       tx.Attributes.CreatedAt,
 		TransactionType: txType,
 		RawJson:         rawJSON,
+		CategoryID:      categoryID,
 	}, nil
 }

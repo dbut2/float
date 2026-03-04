@@ -3,7 +3,7 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import BucketDetail from './pages/BucketDetail'
 import Settings from './pages/Settings'
-import Transfers from './pages/Transfers'
+import Rules from './pages/Rules'
 
 export default function App() {
   return (
@@ -12,7 +12,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="buckets/:id" element={<BucketDetail />} />
-          <Route path="transfers" element={<Transfers />} />
+          <Route path="rules" element={<Rules />} />
           <Route path="settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

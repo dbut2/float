@@ -58,6 +58,19 @@ type FloatFcmToken struct {
 	FcmToken string
 }
 
+type FloatRule struct {
+	RuleID              uuid.UUID
+	BucketID            uuid.UUID
+	Name                string
+	Priority            int32
+	DescriptionContains sql.NullString
+	MinAmountCents      sql.NullInt64
+	MaxAmountCents      sql.NullInt64
+	TransactionType     sql.NullString
+	CategoryID          sql.NullString
+	CreatedAt           time.Time
+}
+
 type FloatUpTransaction struct {
 	TransactionID   uuid.UUID
 	BucketID        uuid.UUID
@@ -69,6 +82,7 @@ type FloatUpTransaction struct {
 	CreatedAt       time.Time
 	TransactionType sql.NullString
 	RawJson         json.RawMessage
+	CategoryID      sql.NullString
 }
 
 type FloatUser struct {
