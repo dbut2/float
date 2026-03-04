@@ -54,7 +54,19 @@ func (s *RuleService) ListRulesByBucket(ctx context.Context, bucketID, userID uu
 	}
 	rules := make([]Rule, len(rows))
 	for i, r := range rows {
-		rules[i] = dbRowToRule(r)
+		rules[i] = dbRowToRule(database.ListRulesForUserRow{
+			RuleID:              r.RuleID,
+			BucketID:            r.BucketID,
+			Name:                r.Name,
+			Priority:            r.Priority,
+			DescriptionContains: r.DescriptionContains,
+			MinAmountCents:      r.MinAmountCents,
+			MaxAmountCents:      r.MaxAmountCents,
+			TransactionType:     r.TransactionType,
+			CategoryID:          r.CategoryID,
+			CreatedAt:           r.CreatedAt,
+			BucketName:          r.BucketName,
+		})
 	}
 	return rules, nil
 }
@@ -149,7 +161,7 @@ func applyRules(ctx context.Context, q database.Querier, userID, txID uuid.UUID,
 	return false, nil
 }
 
-func matchesRule(r database.ListRulesRow, description string, amountCents int64, txType, categoryID sql.NullString) bool {
+func matchesRule(r database.ListRulesForUserRow, description string, amountCents int64, txType, categoryID sql.NullString) bool {
 	if r.DescriptionContains.Valid {
 		if !strings.Contains(strings.ToLower(description), strings.ToLower(r.DescriptionContains.String)) {
 			return false
@@ -178,7 +190,7 @@ func matchesRule(r database.ListRulesRow, description string, amountCents int64,
 	return true
 }
 
-func dbRowToRule(r database.ListRulesRow) Rule {
+func dbRowToRule(r database.ListRulesForUserRow) Rule {
 	rule := Rule{
 		RuleID:     r.RuleID,
 		BucketID:   r.BucketID,
