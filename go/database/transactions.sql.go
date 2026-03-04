@@ -72,22 +72,19 @@ func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID
 	var items []FloatBucketLedger
 	for rows.Next() {
 		var i FloatBucketLedger
-		var message, displayAmount sql.NullString
 		if err := rows.Scan(
 			&i.TransactionID,
 			&i.BucketID,
 			&i.Description,
-			&message,
+			&i.Message,
 			&i.AmountCents,
-			&displayAmount,
+			&i.DisplayAmount,
 			&i.CurrencyCode,
 			&i.CreatedAt,
 			&i.IsTransaction,
 		); err != nil {
 			return nil, err
 		}
-		i.Message = message.String
-		i.DisplayAmount = displayAmount.String
 		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
@@ -115,46 +112,6 @@ func (q *Queries) ListTransactions(ctx context.Context, userID uuid.UUID) ([]Flo
 	var items []FloatBucketLedger
 	for rows.Next() {
 		var i FloatBucketLedger
-		var message, displayAmount sql.NullString
-		if err := rows.Scan(
-			&i.TransactionID,
-			&i.BucketID,
-			&i.Description,
-			&message,
-			&i.AmountCents,
-			&displayAmount,
-			&i.CurrencyCode,
-			&i.CreatedAt,
-			&i.IsTransaction,
-		); err != nil {
-			return nil, err
-		}
-		i.Message = message.String
-		i.DisplayAmount = displayAmount.String
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listUpTransactionsByBucketID = `-- name: ListUpTransactionsByBucketID :many
-SELECT transaction_id, bucket_id, description, message, amount_cents, display_amount, currency_code, created_at, transaction_type, raw_json, category_id FROM float.up_transactions WHERE bucket_id = $1
-`
-
-func (q *Queries) ListUpTransactionsByBucketID(ctx context.Context, bucketID uuid.UUID) ([]FloatUpTransaction, error) {
-	rows, err := q.db.QueryContext(ctx, listUpTransactionsByBucketID, bucketID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []FloatUpTransaction
-	for rows.Next() {
-		var i FloatUpTransaction
 		if err := rows.Scan(
 			&i.TransactionID,
 			&i.BucketID,
@@ -164,9 +121,7 @@ func (q *Queries) ListUpTransactionsByBucketID(ctx context.Context, bucketID uui
 			&i.DisplayAmount,
 			&i.CurrencyCode,
 			&i.CreatedAt,
-			&i.TransactionType,
-			&i.RawJson,
-			&i.CategoryID,
+			&i.IsTransaction,
 		); err != nil {
 			return nil, err
 		}
@@ -185,11 +140,11 @@ const upsertUpTransaction = `-- name: UpsertUpTransaction :one
 INSERT INTO float.up_transactions (
     transaction_id, bucket_id, description, message,
     amount_cents, display_amount, currency_code, created_at, transaction_type,
-    raw_json, category_id
+    raw_json
 ) VALUES (
     $1,
     (SELECT bucket_id FROM float.buckets WHERE user_id = $2 AND is_general = TRUE),
-    $3, $4, $5, $6, $7, $8, $9, $10, $11
+    $3, $4, $5, $6, $7, $8, $9, $10
 )
 ON CONFLICT (transaction_id) DO UPDATE SET
     description = EXCLUDED.description,
@@ -199,8 +154,7 @@ ON CONFLICT (transaction_id) DO UPDATE SET
     currency_code = EXCLUDED.currency_code,
     created_at = EXCLUDED.created_at,
     transaction_type = EXCLUDED.transaction_type,
-    raw_json = EXCLUDED.raw_json,
-    category_id = EXCLUDED.category_id
+    raw_json = EXCLUDED.raw_json
 RETURNING (xmax = 0) AS inserted
 `
 
@@ -215,7 +169,6 @@ type UpsertUpTransactionParams struct {
 	CreatedAt       time.Time
 	TransactionType sql.NullString
 	RawJson         json.RawMessage
-	CategoryID      sql.NullString
 }
 
 func (q *Queries) UpsertUpTransaction(ctx context.Context, arg UpsertUpTransactionParams) (bool, error) {
@@ -230,7 +183,6 @@ func (q *Queries) UpsertUpTransaction(ctx context.Context, arg UpsertUpTransacti
 		arg.CreatedAt,
 		arg.TransactionType,
 		arg.RawJson,
-		arg.CategoryID,
 	)
 	var inserted bool
 	err := row.Scan(&inserted)

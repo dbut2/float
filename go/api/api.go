@@ -14,6 +14,7 @@ type UserService interface {
 	GetUser(ctx context.Context, userID uuid.UUID) (service.User, error)
 	UpdateToken(ctx context.Context, userID uuid.UUID, token string) error
 	SyncTransactions(ctx context.Context, userID uuid.UUID) (int, error)
+	GetTransactBalance(ctx context.Context, userID uuid.UUID) (int64, error)
 }
 
 type BucketService interface {
@@ -96,6 +97,7 @@ func (a *API) Register(r *gin.RouterGroup) {
 	r.GET("/user", a.getUser)
 	r.PUT("/user/token", a.putUserToken)
 	r.POST("/user/sync", a.postUserSync)
+	r.GET("/user/balance", a.getTransactBalance)
 
 	r.GET("/buckets", a.listBuckets)
 	r.POST("/buckets", a.createBucket)

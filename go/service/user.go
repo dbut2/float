@@ -43,6 +43,28 @@ func (s *UserService) UpdateToken(ctx context.Context, userID uuid.UUID, token s
 	return s.q.SetUserToken(ctx, userID, sql.NullString{String: token, Valid: true})
 }
 
+func (s *UserService) GetTransactBalance(ctx context.Context, userID uuid.UUID) (int64, error) {
+	nullToken, err := s.q.GetUserToken(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+	if !nullToken.Valid {
+		return 0, ErrTokenNotSet
+	}
+
+	client, err := up.NewUpClient(nullToken.String)
+	if err != nil {
+		return 0, err
+	}
+
+	acct, err := client.GetTransactAccount(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return int64(acct.Attributes.Balance.ValueInBaseUnits), nil
+}
+
 func (s *UserService) SyncTransactions(ctx context.Context, userID uuid.UUID) (int, error) {
 	nullToken, err := s.q.GetUserToken(ctx, userID)
 	if err != nil {

@@ -114,6 +114,8 @@ export const api = {
 
   sync: () => request<{ synced: number }>('/api/user/sync', { method: 'POST' }),
 
+  getTransactBalance: () => request<{ balance_cents: number }>('/api/user/balance'),
+
   getTransfers: () => request<Transfer[]>('/api/transfers'),
 
   createTransfer: (fromBucketId: string, toBucketId: string, amountCents: number, note: string) =>

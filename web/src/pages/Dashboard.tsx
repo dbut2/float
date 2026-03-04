@@ -70,6 +70,11 @@ export default function Dashboard() {
     queryFn: api.getBuckets,
   })
 
+  const { data: transactBalance } = useQuery({
+    queryKey: ['transact-balance'],
+    queryFn: api.getTransactBalance,
+  })
+
   const create = useMutation({
     mutationFn: () => api.createBucket(newName.trim()),
     onSuccess: () => {
@@ -89,6 +94,20 @@ export default function Dashboard() {
         <h1 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 22, color: 'var(--text)' }}>
           Buckets
         </h1>
+        {transactBalance != null && (
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            padding: '6px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+          }}>
+            <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Transact</span>
+            <span style={{ fontFamily: 'DM Sans', fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{formatAUD(transactBalance.balance_cents)}</span>
+          </div>
+        )}
       </div>
 
       <div className="animate-fade-up" style={{ opacity: 0 }}>

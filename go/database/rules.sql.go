@@ -13,19 +13,11 @@ import (
 	"github.com/google/uuid"
 )
 
-type ListRulesRow struct {
-	RuleID              uuid.UUID
-	BucketID            uuid.UUID
-	Name                string
-	Priority            int32
-	DescriptionContains sql.NullString
-	MinAmountCents      sql.NullInt64
-	MaxAmountCents      sql.NullInt64
-	TransactionType     sql.NullString
-	CategoryID          sql.NullString
-	CreatedAt           time.Time
-	BucketName          string
-}
+const createRule = `-- name: CreateRule :one
+INSERT INTO float.rules (bucket_id, name, priority, description_contains, min_amount_cents, max_amount_cents, transaction_type, category_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING rule_id, bucket_id, name, priority, description_contains, min_amount_cents, max_amount_cents, transaction_type, category_id, created_at
+`
 
 type CreateRuleParams struct {
 	BucketID            uuid.UUID
@@ -37,116 +29,6 @@ type CreateRuleParams struct {
 	TransactionType     sql.NullString
 	CategoryID          sql.NullString
 }
-
-type UpdateRuleParams struct {
-	RuleID              uuid.UUID
-	Name                string
-	Priority            int32
-	DescriptionContains sql.NullString
-	MinAmountCents      sql.NullInt64
-	MaxAmountCents      sql.NullInt64
-	TransactionType     sql.NullString
-	CategoryID          sql.NullString
-	UserID              uuid.UUID
-}
-
-const listRulesForUser = `-- name: ListRulesForUser :many
-SELECT r.rule_id, r.bucket_id, r.name, r.priority,
-       r.description_contains, r.min_amount_cents, r.max_amount_cents,
-       r.transaction_type, r.category_id, r.created_at,
-       b.name AS bucket_name
-FROM float.rules r
-JOIN float.buckets b USING (bucket_id)
-WHERE b.user_id = $1
-ORDER BY r.priority ASC, r.created_at ASC
-`
-
-func (q *Queries) ListRulesForUser(ctx context.Context, userID uuid.UUID) ([]ListRulesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listRulesForUser, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListRulesRow
-	for rows.Next() {
-		var i ListRulesRow
-		if err := rows.Scan(
-			&i.RuleID,
-			&i.BucketID,
-			&i.Name,
-			&i.Priority,
-			&i.DescriptionContains,
-			&i.MinAmountCents,
-			&i.MaxAmountCents,
-			&i.TransactionType,
-			&i.CategoryID,
-			&i.CreatedAt,
-			&i.BucketName,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listRulesByBucket = `-- name: ListRulesByBucket :many
-SELECT r.rule_id, r.bucket_id, r.name, r.priority,
-       r.description_contains, r.min_amount_cents, r.max_amount_cents,
-       r.transaction_type, r.category_id, r.created_at,
-       b.name AS bucket_name
-FROM float.rules r
-JOIN float.buckets b USING (bucket_id)
-WHERE r.bucket_id = $1 AND b.user_id = $2
-ORDER BY r.priority ASC, r.created_at ASC
-`
-
-func (q *Queries) ListRulesByBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) ([]ListRulesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listRulesByBucket, bucketID, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListRulesRow
-	for rows.Next() {
-		var i ListRulesRow
-		if err := rows.Scan(
-			&i.RuleID,
-			&i.BucketID,
-			&i.Name,
-			&i.Priority,
-			&i.DescriptionContains,
-			&i.MinAmountCents,
-			&i.MaxAmountCents,
-			&i.TransactionType,
-			&i.CategoryID,
-			&i.CreatedAt,
-			&i.BucketName,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const createRule = `-- name: CreateRule :one
-INSERT INTO float.rules (bucket_id, name, priority, description_contains, min_amount_cents, max_amount_cents, transaction_type, category_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING rule_id, bucket_id, name, priority, description_contains, min_amount_cents, max_amount_cents, transaction_type, category_id, created_at
-`
 
 func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (FloatRule, error) {
 	row := q.db.QueryRowContext(ctx, createRule,
@@ -175,6 +57,176 @@ func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (FloatRu
 	return i, err
 }
 
+const deleteRule = `-- name: DeleteRule :exec
+DELETE FROM float.rules r
+USING float.buckets b
+WHERE r.rule_id = $1 AND r.bucket_id = b.bucket_id AND b.user_id = $2
+`
+
+func (q *Queries) DeleteRule(ctx context.Context, ruleID uuid.UUID, userID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteRule, ruleID, userID)
+	return err
+}
+
+const listRulesByBucket = `-- name: ListRulesByBucket :many
+SELECT r.rule_id, r.bucket_id, r.name, r.priority,
+       r.description_contains, r.min_amount_cents, r.max_amount_cents,
+       r.transaction_type, r.category_id, r.created_at,
+       b.name AS bucket_name
+FROM float.rules r
+JOIN float.buckets b USING (bucket_id)
+WHERE r.bucket_id = $1 AND b.user_id = $2
+ORDER BY r.priority ASC, r.created_at ASC
+`
+
+type ListRulesByBucketRow struct {
+	RuleID              uuid.UUID
+	BucketID            uuid.UUID
+	Name                string
+	Priority            int32
+	DescriptionContains sql.NullString
+	MinAmountCents      sql.NullInt64
+	MaxAmountCents      sql.NullInt64
+	TransactionType     sql.NullString
+	CategoryID          sql.NullString
+	CreatedAt           time.Time
+	BucketName          string
+}
+
+func (q *Queries) ListRulesByBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) ([]ListRulesByBucketRow, error) {
+	rows, err := q.db.QueryContext(ctx, listRulesByBucket, bucketID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRulesByBucketRow
+	for rows.Next() {
+		var i ListRulesByBucketRow
+		if err := rows.Scan(
+			&i.RuleID,
+			&i.BucketID,
+			&i.Name,
+			&i.Priority,
+			&i.DescriptionContains,
+			&i.MinAmountCents,
+			&i.MaxAmountCents,
+			&i.TransactionType,
+			&i.CategoryID,
+			&i.CreatedAt,
+			&i.BucketName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRulesForUser = `-- name: ListRulesForUser :many
+SELECT r.rule_id, r.bucket_id, r.name, r.priority,
+       r.description_contains, r.min_amount_cents, r.max_amount_cents,
+       r.transaction_type, r.category_id, r.created_at,
+       b.name AS bucket_name
+FROM float.rules r
+JOIN float.buckets b USING (bucket_id)
+WHERE b.user_id = $1
+ORDER BY r.priority ASC, r.created_at ASC
+`
+
+type ListRulesForUserRow struct {
+	RuleID              uuid.UUID
+	BucketID            uuid.UUID
+	Name                string
+	Priority            int32
+	DescriptionContains sql.NullString
+	MinAmountCents      sql.NullInt64
+	MaxAmountCents      sql.NullInt64
+	TransactionType     sql.NullString
+	CategoryID          sql.NullString
+	CreatedAt           time.Time
+	BucketName          string
+}
+
+func (q *Queries) ListRulesForUser(ctx context.Context, userID uuid.UUID) ([]ListRulesForUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listRulesForUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRulesForUserRow
+	for rows.Next() {
+		var i ListRulesForUserRow
+		if err := rows.Scan(
+			&i.RuleID,
+			&i.BucketID,
+			&i.Name,
+			&i.Priority,
+			&i.DescriptionContains,
+			&i.MinAmountCents,
+			&i.MaxAmountCents,
+			&i.TransactionType,
+			&i.CategoryID,
+			&i.CreatedAt,
+			&i.BucketName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUpTransactionsByBucketID = `-- name: ListUpTransactionsByBucketID :many
+SELECT transaction_id, bucket_id, description, message, amount_cents, display_amount, currency_code, created_at, transaction_type, raw_json, category_id FROM float.up_transactions WHERE bucket_id = $1
+`
+
+func (q *Queries) ListUpTransactionsByBucketID(ctx context.Context, bucketID uuid.UUID) ([]FloatUpTransaction, error) {
+	rows, err := q.db.QueryContext(ctx, listUpTransactionsByBucketID, bucketID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FloatUpTransaction
+	for rows.Next() {
+		var i FloatUpTransaction
+		if err := rows.Scan(
+			&i.TransactionID,
+			&i.BucketID,
+			&i.Description,
+			&i.Message,
+			&i.AmountCents,
+			&i.DisplayAmount,
+			&i.CurrencyCode,
+			&i.CreatedAt,
+			&i.TransactionType,
+			&i.RawJson,
+			&i.CategoryID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateRule = `-- name: UpdateRule :one
 UPDATE float.rules r
 SET name                 = $2,
@@ -188,6 +240,18 @@ FROM float.buckets b
 WHERE r.rule_id = $1 AND r.bucket_id = b.bucket_id AND b.user_id = $9
 RETURNING r.rule_id, r.bucket_id, r.name, r.priority, r.description_contains, r.min_amount_cents, r.max_amount_cents, r.transaction_type, r.category_id, r.created_at
 `
+
+type UpdateRuleParams struct {
+	RuleID              uuid.UUID
+	Name                string
+	Priority            int32
+	DescriptionContains sql.NullString
+	MinAmountCents      sql.NullInt64
+	MaxAmountCents      sql.NullInt64
+	TransactionType     sql.NullString
+	CategoryID          sql.NullString
+	UserID              uuid.UUID
+}
 
 func (q *Queries) UpdateRule(ctx context.Context, arg UpdateRuleParams) (FloatRule, error) {
 	row := q.db.QueryRowContext(ctx, updateRule,
@@ -215,15 +279,4 @@ func (q *Queries) UpdateRule(ctx context.Context, arg UpdateRuleParams) (FloatRu
 		&i.CreatedAt,
 	)
 	return i, err
-}
-
-const deleteRule = `-- name: DeleteRule :exec
-DELETE FROM float.rules r
-USING float.buckets b
-WHERE r.rule_id = $1 AND r.bucket_id = b.bucket_id AND b.user_id = $2
-`
-
-func (q *Queries) DeleteRule(ctx context.Context, ruleID uuid.UUID, userID uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteRule, ruleID, userID)
-	return err
 }
