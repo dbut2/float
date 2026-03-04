@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
+import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, Inbox, RotateCw, Trash2, X } from 'lucide-react'
 import { api, formatAUD, formatDate, type Transaction, type Transfer, type Trickle } from '../lib/api'
 import AssignSheet from '../components/AssignSheet'
 import TransferSheet from '../components/TransferSheet'
@@ -130,11 +131,10 @@ export default function BucketDetail() {
               justifyContent: 'center',
               cursor: 'pointer',
               color: 'var(--text)',
-              fontSize: 18,
               flexShrink: 0,
             }}
           >
-            ←
+            <ChevronLeft size={18} strokeWidth={1.75} />
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1
@@ -164,11 +164,10 @@ export default function BucketDetail() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  fontSize: 16,
                 }}
                 title="Manage trickle"
               >
-                ⟳
+                <RotateCw size={16} strokeWidth={1.75} />
               </button>
             )}
             <button
@@ -183,10 +182,9 @@ export default function BucketDetail() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                fontSize: 16,
               }}
             >
-              ⇄
+              <ArrowLeftRight size={16} strokeWidth={1.75} />
             </button>
             {!bucket?.is_general && (
               <button
@@ -201,10 +199,9 @@ export default function BucketDetail() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  fontSize: 16,
                 }}
               >
-                🗑
+                <Trash2 size={16} strokeWidth={1.75} color="var(--red)" />
               </button>
             )}
           </div>
@@ -221,7 +218,7 @@ export default function BucketDetail() {
           >
             {trickle ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ fontSize: 20, color: 'var(--accent)', flexShrink: 0 }}>⟳</div>
+                <RotateCw size={20} color="var(--accent)" strokeWidth={1.75} style={{ flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>
                     {formatAUD(trickle.amount_cents)} · {periodLabel(trickle)}
@@ -263,7 +260,7 @@ export default function BucketDetail() {
                       cursor: 'pointer',
                     }}
                   >
-                    {deleteTrickleMutation.isPending ? '…' : '✕'}
+                    {deleteTrickleMutation.isPending ? '…' : <X size={13} strokeWidth={1.75} />}
                   </button>
                 </div>
               </div>
@@ -281,7 +278,7 @@ export default function BucketDetail() {
                   padding: 0,
                 }}
               >
-                <span style={{ fontSize: 20, color: 'var(--text-2)' }}>⟳</span>
+                <RotateCw size={20} color="var(--text-2)" strokeWidth={1.75} />
                 <span style={{ fontFamily: 'DM Sans', fontSize: 14, color: 'var(--text-2)' }}>Add Trickle</span>
               </button>
             )}
@@ -327,7 +324,9 @@ export default function BucketDetail() {
           ))
         ) : listItems.length === 0 ? (
           <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-2)' }}>
-            <p style={{ fontSize: 32, marginBottom: 10 }}>◻</p>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+              <Inbox size={32} color="var(--text-2)" strokeWidth={1.75} />
+            </div>
             <p style={{ fontFamily: 'DM Sans', fontSize: 15 }}>No transactions assigned</p>
           </div>
         ) : (
@@ -363,11 +362,9 @@ export default function BucketDetail() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
-                      fontSize: 20,
-                      color: isDebit ? 'var(--red)' : 'var(--green)',
                     }}
                   >
-                    {isDebit ? '↓' : '↑'}
+                    {isDebit ? <ArrowDown size={20} color="var(--red)" strokeWidth={1.75} /> : <ArrowUp size={20} color="var(--green)" strokeWidth={1.75} />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p className="line-clamp-1" style={{ fontSize: 15, color: 'var(--text)', fontWeight: 500 }}>
@@ -415,11 +412,9 @@ export default function BucketDetail() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
-                      fontSize: 18,
-                      color: 'var(--accent)',
                     }}
                   >
-                    ⟳
+                    <RotateCw size={18} color="var(--accent)" strokeWidth={1.75} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p className="line-clamp-1" style={{ fontSize: 15, color: 'var(--text)', fontWeight: 500 }}>
@@ -473,11 +468,9 @@ export default function BucketDetail() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    fontSize: 18,
-                    color: 'var(--accent)',
                   }}
                 >
-                  ⇄
+                  <ArrowLeftRight size={18} color="var(--accent)" strokeWidth={1.75} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p className="line-clamp-1" style={{ fontSize: 15, color: 'var(--text)', fontWeight: 500 }}>
