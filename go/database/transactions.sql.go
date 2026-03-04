@@ -72,19 +72,22 @@ func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID
 	var items []FloatBucketLedger
 	for rows.Next() {
 		var i FloatBucketLedger
+		var message, displayAmount sql.NullString
 		if err := rows.Scan(
 			&i.TransactionID,
 			&i.BucketID,
 			&i.Description,
-			&i.Message,
+			&message,
 			&i.AmountCents,
-			&i.DisplayAmount,
+			&displayAmount,
 			&i.CurrencyCode,
 			&i.CreatedAt,
 			&i.IsTransaction,
 		); err != nil {
 			return nil, err
 		}
+		i.Message = message.String
+		i.DisplayAmount = displayAmount.String
 		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
@@ -112,19 +115,22 @@ func (q *Queries) ListTransactions(ctx context.Context, userID uuid.UUID) ([]Flo
 	var items []FloatBucketLedger
 	for rows.Next() {
 		var i FloatBucketLedger
+		var message, displayAmount sql.NullString
 		if err := rows.Scan(
 			&i.TransactionID,
 			&i.BucketID,
 			&i.Description,
-			&i.Message,
+			&message,
 			&i.AmountCents,
-			&i.DisplayAmount,
+			&displayAmount,
 			&i.CurrencyCode,
 			&i.CreatedAt,
 			&i.IsTransaction,
 		); err != nil {
 			return nil, err
 		}
+		i.Message = message.String
+		i.DisplayAmount = displayAmount.String
 		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {

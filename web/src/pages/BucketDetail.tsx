@@ -66,14 +66,17 @@ export default function BucketDetail() {
 
   const listItems: ListItem[] = [
     ...bucketTx.map((tx): ListItem => {
-      if (!tx.is_transaction && isTrickleEntry(tx, bucketTransfers)) {
-        return { kind: 'trickle', tx }
+      if (!tx.is_transaction) {
+        if (isTrickleEntry(tx, bucketTransfers)) {
+          return { kind: 'trickle', tx }
+        }
+        const txTime = new Date(tx.created_at).getTime()
+        const matched = allTransfers.find((t) => Math.abs(new Date(t.created_at).getTime() - txTime) < 1000)
+        if (matched) {
+          return { kind: 'transfer', t: matched, amountCents: tx.amount_cents }
+        }
       }
       return { kind: 'transaction', tx }
-    }),
-    ...bucketTransfers.map((t): ListItem => {
-      const isOutgoing = t.from_bucket_id === bucketId
-      return { kind: 'transfer', t, amountCents: isOutgoing ? -t.amount_cents : t.amount_cents }
     }),
   ].sort((a, b) => {
     const dateA = a.kind === 'transaction' || a.kind === 'trickle' ? a.tx.created_at : a.t.created_at
