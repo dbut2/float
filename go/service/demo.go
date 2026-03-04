@@ -17,6 +17,8 @@ type demoData struct {
 	Buckets      []demoBucketData  `json:"buckets"`
 	Transactions []demoTxData      `json:"transactions"`
 	Transfers    []demoTranserData `json:"transfers"`
+	Trickles     []demoTrickleData `json:"trickles"`
+	Rules        []demoRuleData    `json:"rules"`
 }
 
 type demoBucketData struct {
@@ -46,11 +48,35 @@ type demoTranserData struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+type demoTrickleData struct {
+	TrickleID   uuid.UUID  `json:"trickle_id"`
+	ToBucketID  uuid.UUID  `json:"to_bucket_id"`
+	AmountCents int64      `json:"amount_cents"`
+	Description string     `json:"description"`
+	Period      string     `json:"period"`
+	StartDate   time.Time  `json:"start_date"`
+	EndDate     *time.Time `json:"end_date"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+type demoRuleData struct {
+	RuleID              uuid.UUID `json:"rule_id"`
+	BucketID            uuid.UUID `json:"bucket_id"`
+	Name                string    `json:"name"`
+	Priority            int32     `json:"priority"`
+	DescriptionContains *string   `json:"description_contains"`
+	MinAmountCents      *int64    `json:"min_amount_cents"`
+	MaxAmountCents      *int64    `json:"max_amount_cents"`
+	CreatedAt           time.Time `json:"created_at"`
+}
+
 type DemoService struct {
 	user      User
 	buckets   []Bucket
 	transfers []Transfer
 	ledger    []Transaction
+	trickles  []Trickle
+	rules     []Rule
 }
 
 func NewDemoService() *DemoService {
@@ -126,6 +152,45 @@ func NewDemoService() *DemoService {
 	}
 	for i := range s.buckets {
 		s.buckets[i].BalanceCents = balances[s.buckets[i].BucketID]
+	}
+
+	generalBucketID := uuid.UUID{}
+	for _, b := range s.buckets {
+		if b.IsGeneral {
+			generalBucketID = b.BucketID
+			break
+		}
+	}
+
+	for _, t := range data.Trickles {
+		s.trickles = append(s.trickles, Trickle{
+			TrickleID:      t.TrickleID,
+			FromBucketID:   generalBucketID,
+			FromBucketName: bucketNames[generalBucketID],
+			ToBucketID:     t.ToBucketID,
+			ToBucketName:   bucketNames[t.ToBucketID],
+			AmountCents:    t.AmountCents,
+			Description:    t.Description,
+			Period:         t.Period,
+			StartDate:      t.StartDate,
+			EndDate:        t.EndDate,
+			CreatedAt:      t.CreatedAt,
+			UserID:         data.User.UserID,
+		})
+	}
+
+	for _, r := range data.Rules {
+		s.rules = append(s.rules, Rule{
+			RuleID:              r.RuleID,
+			BucketID:            r.BucketID,
+			BucketName:          bucketNames[r.BucketID],
+			Name:                r.Name,
+			Priority:            r.Priority,
+			DescriptionContains: r.DescriptionContains,
+			MinAmountCents:      r.MinAmountCents,
+			MaxAmountCents:      r.MaxAmountCents,
+			CreatedAt:           r.CreatedAt,
+		})
 	}
 
 	return s
@@ -211,10 +276,15 @@ func (s *DemoService) UnregisterToken(_ context.Context, _ uuid.UUID, _ string) 
 }
 
 func (s *DemoService) ListTrickles(_ context.Context, _ uuid.UUID) ([]Trickle, error) {
-	return []Trickle{}, nil
+	return s.trickles, nil
 }
 
-func (s *DemoService) GetTrickle(_ context.Context, _, _ uuid.UUID) (Trickle, error) {
+func (s *DemoService) GetTrickle(_ context.Context, toBucketID, _ uuid.UUID) (Trickle, error) {
+	for _, t := range s.trickles {
+		if t.ToBucketID == toBucketID {
+			return t, nil
+		}
+	}
 	return Trickle{}, ErrNotFound
 }
 
@@ -229,11 +299,17 @@ func (s *DemoService) DeleteTrickle(_ context.Context, _, _ uuid.UUID) error {
 }
 
 func (s *DemoService) ListRules(_ context.Context, _ uuid.UUID) ([]Rule, error) {
-	return []Rule{}, nil
+	return s.rules, nil
 }
 
-func (s *DemoService) ListRulesByBucket(_ context.Context, _, _ uuid.UUID) ([]Rule, error) {
-	return []Rule{}, nil
+func (s *DemoService) ListRulesByBucket(_ context.Context, bucketID, _ uuid.UUID) ([]Rule, error) {
+	var rules []Rule
+	for _, r := range s.rules {
+		if r.BucketID == bucketID {
+			rules = append(rules, r)
+		}
+	}
+	return rules, nil
 }
 
 func (s *DemoService) CreateRule(_ context.Context, rule Rule) (Rule, error) {
