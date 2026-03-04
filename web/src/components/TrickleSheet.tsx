@@ -124,14 +124,18 @@ export default function TrickleSheet({ bucketId, trickle, onClose }: Props) {
           <option value="monthly">Monthly</option>
         </select>
 
-        <p style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', color: 'var(--text-2)', marginBottom: 6 }}>START DATE</p>
-        <input
-          type="date"
-          value={startDate}
-          min={tomorrow}
-          onChange={(e) => setStartDate(e.target.value)}
-          style={{ ...inputStyle, marginBottom: 12 }}
-        />
+        {!trickle && (
+          <>
+            <p style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', color: 'var(--text-2)', marginBottom: 6 }}>START DATE</p>
+            <input
+              type="date"
+              value={startDate}
+              min={tomorrow}
+              onChange={(e) => setStartDate(e.target.value)}
+              style={{ ...inputStyle, marginBottom: 12 }}
+            />
+          </>
+        )}
 
         <p style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', color: 'var(--text-2)', marginBottom: 6 }}>END DATE <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional — leave blank for never)</span></p>
         <input

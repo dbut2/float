@@ -69,13 +69,9 @@ func (s *TrickleService) UpsertTrickle(ctx context.Context, trickle Trickle) (Tr
 	if !validPeriods[trickle.Period] {
 		return Trickle{}, fmt.Errorf("invalid period: %s", trickle.Period)
 	}
-	tomorrow := time.Now().UTC().Truncate(24*time.Hour).AddDate(0, 0, 1)
-	if trickle.StartDate.UTC().Truncate(24 * time.Hour).Before(tomorrow) {
-		return Trickle{}, fmt.Errorf("start_date must be tomorrow or later")
-	}
-	if trickle.EndDate != nil && trickle.EndDate.Before(trickle.StartDate) {
-		return Trickle{}, fmt.Errorf("end_date must be on or after start_date")
-	}
+
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+	tomorrow := today.AddDate(0, 0, 1)
 
 	general, err := s.q.GetGeneralBucket(ctx, trickle.UserID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -96,13 +92,13 @@ func (s *TrickleService) UpsertTrickle(ctx context.Context, trickle Trickle) (Tr
 		return Trickle{}, fmt.Errorf("cannot set trickle to General bucket")
 	}
 
-	today := time.Now().UTC().Truncate(24 * time.Hour)
-
 	existing, err := s.q.GetActiveTrickleByToBucketID(ctx, trickle.ToBucketID, trickle.UserID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return Trickle{}, err
 	}
 	if err == nil {
+		trickle.StartDate = nextOccurrence(existing.StartDate, trickle.Period, tomorrow)
+
 		existingStart := existing.StartDate.UTC().Truncate(24 * time.Hour)
 		if existingStart.Before(today) {
 			if err := s.q.SetTrickleEndDate(ctx, existing.TrickleID, sql.NullTime{Time: today, Valid: true}, trickle.UserID); err != nil {
@@ -113,6 +109,14 @@ func (s *TrickleService) UpsertTrickle(ctx context.Context, trickle Trickle) (Tr
 				return Trickle{}, err
 			}
 		}
+	} else {
+		if trickle.StartDate.UTC().Truncate(24 * time.Hour).Before(tomorrow) {
+			return Trickle{}, fmt.Errorf("start_date must be tomorrow or later")
+		}
+	}
+
+	if trickle.EndDate != nil && trickle.EndDate.Before(trickle.StartDate) {
+		return Trickle{}, fmt.Errorf("end_date must be on or after start_date")
 	}
 
 	var endDate sql.NullTime
@@ -183,6 +187,38 @@ func trickleAmount(t Trickle, asOf time.Time) int64 {
 		count = 0
 	}
 	return count * t.AmountCents
+}
+
+func nextOccurrence(anchor time.Time, period string, minDate time.Time) time.Time {
+	anchor = anchor.UTC().Truncate(24 * time.Hour)
+	minDate = minDate.UTC().Truncate(24 * time.Hour)
+
+	if !anchor.Before(minDate) {
+		return anchor
+	}
+
+	switch period {
+	case "daily":
+		return minDate
+	case "weekly":
+		days := int(minDate.Sub(anchor).Hours() / 24)
+		weeks := (days + 6) / 7 // ceil
+		return anchor.AddDate(0, 0, weeks*7)
+	case "fortnightly":
+		days := int(minDate.Sub(anchor).Hours() / 24)
+		fortnights := (days + 13) / 14 // ceil
+		return anchor.AddDate(0, 0, fortnights*14)
+	case "monthly":
+		anchorYear, anchorMonth, _ := anchor.Date()
+		minYear, minMonth, _ := minDate.Date()
+		months := (minYear-anchorYear)*12 + int(minMonth-anchorMonth)
+		candidate := anchor.AddDate(0, months, 0)
+		if candidate.Before(minDate) {
+			candidate = anchor.AddDate(0, months+1, 0)
+		}
+		return candidate
+	}
+	return minDate
 }
 
 func dbTrickleToService(trickleID, fromBucketID uuid.UUID, fromBucketName string, toBucketID uuid.UUID, toBucketName string, amountCents int64, description, period string, startDate time.Time, endDate sql.NullTime, createdAt time.Time) Trickle {
