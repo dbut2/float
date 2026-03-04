@@ -154,7 +154,6 @@ ON CONFLICT (transaction_id) DO UPDATE SET
     currency_code = EXCLUDED.currency_code,
     created_at = EXCLUDED.created_at,
     transaction_type = EXCLUDED.transaction_type,
-    deep_link_url = EXCLUDED.deep_link_url,
     raw_json = EXCLUDED.raw_json
 RETURNING (xmax = 0) AS inserted
 `
