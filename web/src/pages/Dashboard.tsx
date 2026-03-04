@@ -95,9 +95,10 @@ export default function Dashboard() {
           Buckets
         </h1>
         {transactBalance != null && (
-          <span style={{ fontFamily: 'DM Sans', fontSize: 14, color: 'var(--text-2)' }}>
-            Card: {formatAUD(transactBalance.balance_cents)}
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+            <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', color: 'var(--text-3)', textTransform: 'uppercase' }}>Card</span>
+            <span className="amount-neutral" style={{ fontSize: 15 }}>{formatAUD(transactBalance.balance_cents)}</span>
+          </div>
         )}
       </div>
 
