@@ -54,19 +54,7 @@ func (s *RuleService) ListRulesByBucket(ctx context.Context, bucketID, userID uu
 	}
 	rules := make([]Rule, len(rows))
 	for i, r := range rows {
-		rules[i] = dbRowToRule(database.ListRulesForUserRow{
-			RuleID:              r.RuleID,
-			BucketID:            r.BucketID,
-			Name:                r.Name,
-			Priority:            r.Priority,
-			DescriptionContains: r.DescriptionContains,
-			MinAmountCents:      r.MinAmountCents,
-			MaxAmountCents:      r.MaxAmountCents,
-			TransactionType:     r.TransactionType,
-			CategoryID:          r.CategoryID,
-			CreatedAt:           r.CreatedAt,
-			BucketName:          r.BucketName,
-		})
+		rules[i] = dbRowToRule(database.ListRulesForUserRow(r))
 	}
 	return rules, nil
 }
