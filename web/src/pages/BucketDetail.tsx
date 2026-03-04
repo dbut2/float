@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, Inbox, RotateCw, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, Filter, Inbox, RotateCw, Trash2, X } from 'lucide-react'
 import { api, formatAUD, formatDate, type Transaction, type Transfer, type Trickle } from '../lib/api'
 import AssignSheet from '../components/AssignSheet'
+import RulesSheet from '../components/RulesSheet'
 import TransferSheet from '../components/TransferSheet'
 import TrickleSheet from '../components/TrickleSheet'
 import { useDraggableSheet } from '../hooks/useDraggableSheet'
@@ -30,6 +31,7 @@ export default function BucketDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showTransfer, setShowTransfer] = useState(false)
   const [showTrickle, setShowTrickle] = useState(false)
+  const [showRules, setShowRules] = useState(false)
 
   const { data: buckets = [] } = useQuery({
     queryKey: ['buckets'],
@@ -151,6 +153,25 @@ export default function BucketDetail() {
             </h1>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
+            {!bucket?.is_general && (
+              <button
+                onClick={() => setShowRules(true)}
+                style={{
+                  background: 'var(--surface)',
+                  border: 'none',
+                  borderRadius: 10,
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+                title="Manage rules"
+              >
+                <Filter size={16} strokeWidth={1.75} />
+              </button>
+            )}
             {!bucket?.is_general && (
               <button
                 onClick={() => setShowTrickle(true)}
@@ -618,6 +639,9 @@ export default function BucketDetail() {
       )}
       {showTrickle && bucketId && (
         <TrickleSheet bucketId={bucketId} trickle={trickle} onClose={() => setShowTrickle(false)} />
+      )}
+      {showRules && bucketId && (
+        <RulesSheet bucketId={bucketId} onClose={() => setShowRules(false)} />
       )}
     </div>
   )

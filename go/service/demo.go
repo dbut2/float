@@ -227,3 +227,29 @@ func (s *DemoService) UpsertTrickle(_ context.Context, trickle Trickle) (Trickle
 func (s *DemoService) DeleteTrickle(_ context.Context, _, _ uuid.UUID) error {
 	return nil
 }
+
+func (s *DemoService) ListRules(_ context.Context, _ uuid.UUID) ([]Rule, error) {
+	return []Rule{}, nil
+}
+
+func (s *DemoService) ListRulesByBucket(_ context.Context, _, _ uuid.UUID) ([]Rule, error) {
+	return []Rule{}, nil
+}
+
+func (s *DemoService) CreateRule(_ context.Context, rule Rule) (Rule, error) {
+	rule.RuleID = uuid.New()
+	rule.CreatedAt = time.Now()
+	return rule, nil
+}
+
+func (s *DemoService) UpdateRule(_ context.Context, rule Rule, _ uuid.UUID) (Rule, error) {
+	return rule, nil
+}
+
+func (s *DemoService) DeleteRule(_ context.Context, _, _ uuid.UUID) error {
+	return nil
+}
+
+func (s *DemoService) ApplyRulesToGeneral(_ context.Context, _ uuid.UUID) (int, error) {
+	return 0, nil
+}

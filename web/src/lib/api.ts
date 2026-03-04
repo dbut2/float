@@ -52,6 +52,20 @@ export interface Trickle {
   created_at: string
 }
 
+export interface Rule {
+  rule_id: string
+  bucket_id: string
+  bucket_name: string
+  name: string
+  priority: number
+  created_at: string
+  description_contains?: string | null
+  min_amount_cents?: number | null
+  max_amount_cents?: number | null
+  transaction_type?: string | null
+  category_id?: string | null
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { 'Content-Type': 'application/json', ...init?.headers },
@@ -123,6 +137,45 @@ export const api = {
 
   deleteTrickle: (bucketId: string) =>
     request<void>(`/api/buckets/${bucketId}/trickle`, { method: 'DELETE' }),
+
+  getRules: () => request<Rule[]>('/api/rules'),
+
+  getBucketRules: (bucketId: string) =>
+    request<Rule[]>(`/api/buckets/${bucketId}/rules`),
+
+  createRule: (bucketId: string, data: {
+    name: string
+    priority?: number
+    description_contains?: string | null
+    min_amount_aud?: number | null
+    max_amount_aud?: number | null
+    transaction_type?: string | null
+    category_id?: string | null
+  }) =>
+    request<Rule>(`/api/buckets/${bucketId}/rules`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateRule: (ruleId: string, data: {
+    name: string
+    priority?: number
+    description_contains?: string | null
+    min_amount_aud?: number | null
+    max_amount_aud?: number | null
+    transaction_type?: string | null
+    category_id?: string | null
+  }) =>
+    request<Rule>(`/api/rules/${ruleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteRule: (ruleId: string) =>
+    request<void>(`/api/rules/${ruleId}`, { method: 'DELETE' }),
+
+  applyRules: () =>
+    request<{ applied: number }>('/api/rules/apply', { method: 'POST' }),
 }
 
 export function formatAUD(cents: number): string {

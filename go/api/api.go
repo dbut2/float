@@ -47,6 +47,15 @@ type TrickleService interface {
 	DeleteTrickle(ctx context.Context, toBucketID, userID uuid.UUID) error
 }
 
+type RuleService interface {
+	ListRules(ctx context.Context, userID uuid.UUID) ([]service.Rule, error)
+	ListRulesByBucket(ctx context.Context, bucketID, userID uuid.UUID) ([]service.Rule, error)
+	CreateRule(ctx context.Context, rule service.Rule) (service.Rule, error)
+	UpdateRule(ctx context.Context, rule service.Rule, userID uuid.UUID) (service.Rule, error)
+	DeleteRule(ctx context.Context, ruleID, userID uuid.UUID) error
+	ApplyRulesToGeneral(ctx context.Context, userID uuid.UUID) (int, error)
+}
+
 type API struct {
 	users        UserService
 	buckets      BucketService
@@ -54,6 +63,7 @@ type API struct {
 	transfers    TransferService
 	push         PushService
 	trickles     TrickleService
+	rules        RuleService
 }
 
 func New(q database.Querier) *API {
@@ -64,6 +74,7 @@ func New(q database.Querier) *API {
 		transfers:    service.NewTransferService(q),
 		push:         service.NewPushService(q),
 		trickles:     service.NewTrickleService(q),
+		rules:        service.NewRuleService(q),
 	}
 }
 
@@ -77,6 +88,7 @@ func NewDemo() (*API, uuid.UUID) {
 		transfers:    demoService,
 		push:         demoService,
 		trickles:     demoService,
+		rules:        demoService,
 	}, demoService.UserID()
 }
 
@@ -90,6 +102,8 @@ func (a *API) Register(r *gin.RouterGroup) {
 	r.GET("/buckets/:bucketID", a.getBucket)
 	r.DELETE("/buckets/:bucketID", a.deleteBucket)
 	r.GET("/buckets/:bucketID/transactions", a.listBucketTransactions)
+	r.GET("/buckets/:bucketID/rules", a.listBucketRules)
+	r.POST("/buckets/:bucketID/rules", a.createRule)
 
 	r.GET("/transactions", a.listTransactions)
 	r.PUT("/transactions/:transactionID/bucket", a.assignTransactionToBucket)
@@ -102,6 +116,11 @@ func (a *API) Register(r *gin.RouterGroup) {
 	r.GET("/buckets/:bucketID/trickle", a.getTrickle)
 	r.PUT("/buckets/:bucketID/trickle", a.upsertTrickle)
 	r.DELETE("/buckets/:bucketID/trickle", a.deleteTrickle)
+
+	r.GET("/rules", a.listRules)
+	r.PUT("/rules/:ruleID", a.updateRule)
+	r.DELETE("/rules/:ruleID", a.deleteRule)
+	r.POST("/rules/apply", a.applyRulesToGeneral)
 
 	r.POST("/fcm-tokens", a.registerFCMToken)
 	r.DELETE("/fcm-tokens", a.unregisterFCMToken)
