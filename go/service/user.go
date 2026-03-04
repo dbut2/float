@@ -104,11 +104,6 @@ func upTransactionToParams(userID uuid.UUID, tx up.TransactionResource) (databas
 		txType = sql.NullString{String: *tx.Attributes.TransactionType, Valid: true}
 	}
 
-	deepLinkURL := ""
-	if tx.Links != nil {
-		deepLinkURL = tx.Links.Self
-	}
-
 	rawJSON, err := json.Marshal(tx)
 	if err != nil {
 		return database.UpsertUpTransactionParams{}, err
@@ -124,7 +119,6 @@ func upTransactionToParams(userID uuid.UUID, tx up.TransactionResource) (databas
 		CurrencyCode:    tx.Attributes.Amount.CurrencyCode,
 		CreatedAt:       tx.Attributes.CreatedAt,
 		TransactionType: txType,
-		DeepLinkUrl:     deepLinkURL,
 		RawJson:         rawJSON,
 	}, nil
 }

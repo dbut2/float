@@ -29,7 +29,6 @@ type FloatBucketLedger struct {
 	DisplayAmount string
 	CurrencyCode  string
 	CreatedAt     time.Time
-	DeepLinkUrl   string
 	IsTransaction bool
 }
 
@@ -57,7 +56,6 @@ type FloatUpTransaction struct {
 	CurrencyCode    string
 	CreatedAt       time.Time
 	TransactionType sql.NullString
-	DeepLinkUrl     string
 	RawJson         json.RawMessage
 }
 

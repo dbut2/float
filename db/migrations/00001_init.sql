@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS float.up_transactions (
     currency_code    TEXT NOT NULL DEFAULT 'AUD',
     created_at       TIMESTAMPTZ NOT NULL,
     transaction_type TEXT,
-    deep_link_url    TEXT NOT NULL,
     raw_json         JSONB NOT NULL
 );
 
@@ -57,7 +56,6 @@ CREATE OR REPLACE VIEW float.bucket_ledger AS
            display_amount,
            currency_code,
            created_at,
-           deep_link_url,
            TRUE AS is_transaction
     FROM float.up_transactions
     WHERE transaction_type IS DISTINCT FROM 'Transfer'
@@ -68,6 +66,7 @@ CREATE OR REPLACE VIEW float.bucket_ledger AS
     SELECT NULL as transaction_id,
            to_bucket_id AS bucket_id,
            note AS description,
+           NULL AS message,
            amount_cents,
            NULL AS display_amount, --todo
            'AUD' AS currency_code,
@@ -80,6 +79,7 @@ CREATE OR REPLACE VIEW float.bucket_ledger AS
     SELECT NULL as transaction_id,
            from_bucket_id AS bucket_id,
            note AS description,
+           NULL AS message,
            -amount_cents,
            NULL AS display_amount, --todo
            'AUD' AS currency_code,

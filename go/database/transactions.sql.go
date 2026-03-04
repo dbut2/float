@@ -35,7 +35,7 @@ func (q *Queries) DeleteUpTransaction(ctx context.Context, transactionID uuid.UU
 }
 
 const getTransaction = `-- name: GetTransaction :one
-SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.display_amount, l.currency_code, l.created_at, l.deep_link_url, l.is_transaction FROM float.bucket_ledger l
+SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.display_amount, l.currency_code, l.created_at, l.is_transaction FROM float.bucket_ledger l
 JOIN float.buckets b USING (bucket_id)
 WHERE l.transaction_id = $1 AND b.user_id = $2
 `
@@ -52,14 +52,13 @@ func (q *Queries) GetTransaction(ctx context.Context, transactionID uuid.UUID, u
 		&i.DisplayAmount,
 		&i.CurrencyCode,
 		&i.CreatedAt,
-		&i.DeepLinkUrl,
 		&i.IsTransaction,
 	)
 	return i, err
 }
 
 const listBucketTransactions = `-- name: ListBucketTransactions :many
-SELECT transaction_id, bucket_id, description, message, amount_cents, display_amount, currency_code, created_at, deep_link_url, is_transaction FROM float.bucket_ledger
+SELECT transaction_id, bucket_id, description, message, amount_cents, display_amount, currency_code, created_at, is_transaction FROM float.bucket_ledger
 WHERE bucket_id = $1
 ORDER BY created_at DESC
 `
@@ -82,7 +81,6 @@ func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID
 			&i.DisplayAmount,
 			&i.CurrencyCode,
 			&i.CreatedAt,
-			&i.DeepLinkUrl,
 			&i.IsTransaction,
 		); err != nil {
 			return nil, err
@@ -99,7 +97,7 @@ func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID
 }
 
 const listTransactions = `-- name: ListTransactions :many
-SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.display_amount, l.currency_code, l.created_at, l.deep_link_url, l.is_transaction FROM float.bucket_ledger l
+SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.display_amount, l.currency_code, l.created_at, l.is_transaction FROM float.bucket_ledger l
 JOIN float.buckets b USING (bucket_id)
 WHERE b.user_id = $1
 ORDER BY l.created_at DESC
@@ -123,7 +121,6 @@ func (q *Queries) ListTransactions(ctx context.Context, userID uuid.UUID) ([]Flo
 			&i.DisplayAmount,
 			&i.CurrencyCode,
 			&i.CreatedAt,
-			&i.DeepLinkUrl,
 			&i.IsTransaction,
 		); err != nil {
 			return nil, err
@@ -143,11 +140,11 @@ const upsertUpTransaction = `-- name: UpsertUpTransaction :one
 INSERT INTO float.up_transactions (
     transaction_id, bucket_id, description, message,
     amount_cents, display_amount, currency_code, created_at, transaction_type,
-    deep_link_url, raw_json
+    raw_json
 ) VALUES (
     $1,
     (SELECT bucket_id FROM float.buckets WHERE user_id = $2 AND is_general = TRUE),
-    $3, $4, $5, $6, $7, $8, $9, $10, $11
+    $3, $4, $5, $6, $7, $8, $9, $10
 )
 ON CONFLICT (transaction_id) DO UPDATE SET
     description = EXCLUDED.description,
@@ -172,7 +169,6 @@ type UpsertUpTransactionParams struct {
 	CurrencyCode    string
 	CreatedAt       time.Time
 	TransactionType sql.NullString
-	DeepLinkUrl     string
 	RawJson         json.RawMessage
 }
 
@@ -187,7 +183,6 @@ func (q *Queries) UpsertUpTransaction(ctx context.Context, arg UpsertUpTransacti
 		arg.CurrencyCode,
 		arg.CreatedAt,
 		arg.TransactionType,
-		arg.DeepLinkUrl,
 		arg.RawJson,
 	)
 	var inserted bool

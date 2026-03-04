@@ -23,7 +23,6 @@ type Transaction struct {
 	CreatedAt       time.Time       `json:"created_at"`
 	IsTransaction   bool            `json:"is_transaction"`
 	TransactionType *string         `json:"transaction_type,omitempty"`
-	DeepLinkUrl     string          `json:"deep_link_url,omitempty"`
 	RawJson         json.RawMessage `json:"raw_json,omitempty"`
 }
 
@@ -62,8 +61,8 @@ func (s *TransactionService) CreateTransaction(ctx context.Context, tx Transacti
 		CurrencyCode:    tx.CurrencyCode,
 		CreatedAt:       tx.CreatedAt,
 		TransactionType: txType,
-		DeepLinkUrl:     tx.DeepLinkUrl,
-		RawJson:         tx.RawJson,
+		//DeepLinkUrl:     tx.DeepLinkUrl,
+		RawJson: tx.RawJson,
 	})
 	if err != nil {
 		return Transaction{}, err
@@ -77,9 +76,14 @@ func toTransactions(rows []database.FloatBucketLedger) []Transaction {
 		txs[i] = Transaction{
 			TransactionID: r.TransactionID,
 			BucketID:      r.BucketID,
+			Description:   r.Description,
+			Message:       r.Message,
 			AmountCents:   r.AmountCents,
+			DisplayAmount: r.DisplayAmount,
+			CurrencyCode:  r.CurrencyCode,
 			CreatedAt:     r.CreatedAt,
 			IsTransaction: r.IsTransaction,
+			//DeepLinkUrl:   r.DeepLinkUrl,
 		}
 	}
 	return txs
