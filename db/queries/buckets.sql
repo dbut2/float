@@ -9,7 +9,12 @@ FROM float.buckets b
 LEFT JOIN float.bucket_ledger l ON b.bucket_id = l.bucket_id
 WHERE b.user_id = $1
 GROUP BY b.bucket_id
-ORDER BY b.name ASC;
+ORDER BY b.display_order NULLS LAST, b.created_at ASC;
+
+-- name: SetBucketDisplayOrder :exec
+UPDATE float.buckets
+SET display_order = $2
+WHERE bucket_id = $1 AND user_id = $3;
 
 -- name: GetBucket :one
 SELECT b.*, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents

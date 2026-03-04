@@ -43,6 +43,7 @@ type Querier interface {
 	ListUpTransactionsByBucketID(ctx context.Context, bucketID uuid.UUID) ([]FloatUpTransaction, error)
 	ReassignBucketTransactionsToGeneral(ctx context.Context, bucketID uuid.UUID) error
 	RegisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error
+	SetBucketDisplayOrder(ctx context.Context, bucketID uuid.UUID, displayOrder int32, userID uuid.UUID) error
 	SetTrickleEndDate(ctx context.Context, trickleID uuid.UUID, endDate sql.NullTime, userID uuid.UUID) error
 	SetUserToken(ctx context.Context, userID uuid.UUID, upToken sql.NullString) error
 	SetUserWebhookSecret(ctx context.Context, userID uuid.UUID, webhookSecret sql.NullString) error

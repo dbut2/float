@@ -19,6 +19,7 @@ type Bucket struct {
 	IsGeneral    bool      `json:"is_general"`
 	CreatedAt    time.Time `json:"created_at"`
 	BalanceCents int64     `json:"balance_cents"`
+	DisplayOrder *int      `json:"display_order,omitempty"`
 }
 
 type BucketService struct {
@@ -36,6 +37,11 @@ func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bu
 	}
 	buckets := make([]Bucket, len(rows))
 	for i, r := range rows {
+		var displayOrder *int
+		if r.DisplayOrder.Valid {
+			v := int(r.DisplayOrder.Int32)
+			displayOrder = &v
+		}
 		buckets[i] = Bucket{
 			BucketID:     r.BucketID,
 			UserID:       r.UserID,
@@ -43,6 +49,7 @@ func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bu
 			IsGeneral:    r.IsGeneral,
 			CreatedAt:    r.CreatedAt,
 			BalanceCents: r.BalanceCents,
+			DisplayOrder: displayOrder,
 		}
 	}
 
@@ -118,6 +125,15 @@ func (s *BucketService) DeleteBucket(ctx context.Context, bucketID, userID uuid.
 		return err
 	}
 	return s.q.DeleteBucket(ctx, bucketID, userID)
+}
+
+func (s *BucketService) ReorderBuckets(ctx context.Context, userID uuid.UUID, bucketIDs []uuid.UUID) error {
+	for i, id := range bucketIDs {
+		if err := s.q.SetBucketDisplayOrder(ctx, id, int32(i), userID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID) ([]Transaction, error) {

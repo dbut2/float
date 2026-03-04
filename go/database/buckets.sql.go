@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -101,12 +102,12 @@ func (q *Queries) GetGeneralBucket(ctx context.Context, userID uuid.UUID) (Float
 }
 
 const listBuckets = `-- name: ListBuckets :many
-SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
+SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
 FROM float.buckets b
 LEFT JOIN float.bucket_ledger l ON b.bucket_id = l.bucket_id
 WHERE b.user_id = $1
 GROUP BY b.bucket_id
-ORDER BY b.name ASC
+ORDER BY b.display_order NULLS LAST, b.created_at ASC
 `
 
 type ListBucketsRow struct {
@@ -115,6 +116,7 @@ type ListBucketsRow struct {
 	Name         string
 	IsGeneral    bool
 	CreatedAt    time.Time
+	DisplayOrder sql.NullInt32
 	BalanceCents int64
 }
 
@@ -133,6 +135,7 @@ func (q *Queries) ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBuck
 			&i.Name,
 			&i.IsGeneral,
 			&i.CreatedAt,
+			&i.DisplayOrder,
 			&i.BalanceCents,
 		); err != nil {
 			return nil, err
@@ -146,6 +149,17 @@ func (q *Queries) ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBuck
 		return nil, err
 	}
 	return items, nil
+}
+
+const setBucketDisplayOrder = `-- name: SetBucketDisplayOrder :exec
+UPDATE float.buckets
+SET display_order = $2
+WHERE bucket_id = $1 AND user_id = $3
+`
+
+func (q *Queries) SetBucketDisplayOrder(ctx context.Context, bucketID uuid.UUID, displayOrder int32, userID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, setBucketDisplayOrder, bucketID, displayOrder, userID)
+	return err
 }
 
 const reassignBucketTransactionsToGeneral = `-- name: ReassignBucketTransactionsToGeneral :exec

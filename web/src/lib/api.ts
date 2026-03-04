@@ -140,6 +140,12 @@ export const api = {
   deleteTrickle: (bucketId: string) =>
     request<void>(`/api/buckets/${bucketId}/trickle`, { method: 'DELETE' }),
 
+  reorderBuckets: (bucketIds: string[]) =>
+    request<void>('/api/buckets/order', {
+      method: 'PUT',
+      body: JSON.stringify({ bucket_ids: bucketIds }),
+    }),
+
   getRules: () => request<Rule[]>('/api/rules'),
 
   getBucketRules: (bucketId: string) =>
