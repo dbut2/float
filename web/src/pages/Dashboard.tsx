@@ -1,10 +1,74 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Plus } from 'lucide-react'
+import { ChevronRight, CreditCard, Plus } from 'lucide-react'
 import { api, formatAUD } from '../lib/api'
 import { useDraggableSheet } from '../hooks/useDraggableSheet'
 import { useMediaQuery } from '../hooks/useMediaQuery'
+
+function CardBalanceCard({ balanceCents }: { balanceCents: number }) {
+  const isNeg = balanceCents < 0
+  return (
+    <div
+      style={{
+        width: '100%',
+        borderRadius: 20,
+        overflow: 'hidden',
+        border: '1px solid var(--border)',
+        marginBottom: 12,
+        display: 'flex',
+      }}
+    >
+      <div style={{ width: 3, background: 'var(--accent)', flexShrink: 0 }} />
+      <div
+        style={{
+          flex: 1,
+          background: 'linear-gradient(135deg, var(--surface) 0%, rgba(202, 255, 51, 0.03) 100%)',
+          padding: '20px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+            <div
+              style={{
+                width: 26,
+                height: 18,
+                background: 'var(--accent-dim)',
+                borderRadius: 4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <CreditCard size={12} color="var(--accent)" strokeWidth={1.75} />
+            </div>
+            <span
+              style={{
+                fontFamily: 'Syne',
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: '0.04em',
+                color: 'var(--text-2)',
+              }}
+            >
+              Card
+            </span>
+          </div>
+          <p
+            className={isNeg ? 'amount-negative' : 'amount-neutral'}
+            style={{ fontSize: 28, fontWeight: 600, lineHeight: 1 }}
+          >
+            {isNeg ? '−' : ''}{formatAUD(balanceCents)}
+          </p>
+        </div>
+        <CreditCard size={40} color="var(--text)" strokeWidth={0.75} style={{ flexShrink: 0, opacity: 0.06 }} />
+      </div>
+    </div>
+  )
+}
 
 function BucketCard({
   name,
@@ -108,6 +172,11 @@ export default function Dashboard() {
             <span style={{ fontFamily: 'DM Sans', fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{formatAUD(transactBalance.balance_cents)}</span>
           </div>
         )}
+      </div>
+
+      {/* Card balance — wire to API when endpoint is available */}
+      <div className="animate-fade-up" style={{ opacity: 0 }}>
+        <CardBalanceCard balanceCents={0} />
       </div>
 
       <div className="animate-fade-up" style={{ opacity: 0 }}>
