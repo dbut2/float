@@ -129,7 +129,7 @@ func (s *BucketService) DeleteBucket(ctx context.Context, bucketID, userID uuid.
 
 func (s *BucketService) ReorderBuckets(ctx context.Context, userID uuid.UUID, bucketIDs []uuid.UUID) error {
 	for i, id := range bucketIDs {
-		if err := s.q.SetBucketDisplayOrder(ctx, id, int32(i), userID); err != nil {
+		if err := s.q.SetBucketDisplayOrder(ctx, id, sql.NullInt32{Int32: int32(i), Valid: true}, userID); err != nil {
 			return err
 		}
 	}
