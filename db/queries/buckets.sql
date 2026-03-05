@@ -1,6 +1,6 @@
 -- name: CreateBucket :one
-INSERT INTO float.buckets (user_id, name)
-VALUES ($1, $2)
+INSERT INTO float.buckets (user_id, name, currency_code)
+VALUES ($1, $2, $3)
 RETURNING *;
 
 -- name: ListBuckets :many

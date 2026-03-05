@@ -27,7 +27,8 @@ func (a *API) createBucket(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 
 	var body struct {
-		Name string `json:"name"`
+		Name         string  `json:"name"`
+		CurrencyCode *string `json:"currency_code"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -35,8 +36,9 @@ func (a *API) createBucket(c *gin.Context) {
 	}
 
 	bucket, err := a.buckets.CreateBucket(c.Request.Context(), service.Bucket{
-		UserID: userID,
-		Name:   body.Name,
+		UserID:       userID,
+		Name:         body.Name,
+		CurrencyCode: body.CurrencyCode,
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -105,13 +107,15 @@ func (a *API) reorderBuckets(c *gin.Context) {
 }
 
 func (a *API) listBucketTransactions(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
 	bucketID, err := uuid.Parse(c.Param("bucketID"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid bucket ID"})
 		return
 	}
 
-	txs, err := a.buckets.ListBucketTransactions(c.Request.Context(), bucketID)
+	txs, err := a.buckets.ListBucketTransactions(c.Request.Context(), bucketID, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

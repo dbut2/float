@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
-import { api, formatAUD, type Transaction } from '../lib/api'
+import { api, type Transaction } from '../lib/api'
 import { useDraggableSheet } from '../hooks/useDraggableSheet'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 
@@ -104,10 +104,10 @@ export default function AssignSheet({ transaction, onClose }: Props) {
             {transaction.description}
           </p>
           <p
-            className={transaction.amount_cents < 0 ? 'amount-negative' : 'amount-positive'}
+            className={transaction.display_amount.startsWith('-') ? 'amount-negative' : 'amount-positive'}
             style={{ fontSize: 20, fontWeight: 600, marginTop: 4 }}
           >
-            {transaction.amount_cents < 0 ? '−' : '+'}{formatAUD(transaction.amount_cents)}
+            {transaction.display_amount}
           </p>
         </div>
 
@@ -145,7 +145,7 @@ export default function AssignSheet({ transaction, onClose }: Props) {
                 fontSize: 13,
                 color: 'var(--text-2)',
               }}>
-                {formatAUD(bucket.balance_cents)}
+                {bucket.balance_display}
               </span>
             </button>
           ))}

@@ -19,6 +19,7 @@ type Trickle struct {
 	ToBucketID     uuid.UUID  `json:"to_bucket_id"`
 	ToBucketName   string     `json:"to_bucket_name"`
 	AmountCents    int64      `json:"amount_cents"`
+	DisplayAmount  string     `json:"display_amount"`
 	Description    string     `json:"description"`
 	Period         string     `json:"period"`
 	StartDate      time.Time  `json:"start_date"`
@@ -229,6 +230,7 @@ func dbTrickleToService(trickleID, fromBucketID uuid.UUID, fromBucketName string
 		ToBucketID:     toBucketID,
 		ToBucketName:   toBucketName,
 		AmountCents:    amountCents,
+		DisplayAmount:  FormatCurrencyAmount(amountCents, "AUD"),
 		Description:    description,
 		Period:         period,
 		StartDate:      startDate,

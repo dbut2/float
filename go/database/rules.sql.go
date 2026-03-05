@@ -8,15 +8,16 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 const createRule = `-- name: CreateRule :one
-INSERT INTO float.rules (bucket_id, name, priority, description_contains, min_amount_cents, max_amount_cents, transaction_type, category_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING rule_id, bucket_id, name, priority, description_contains, min_amount_cents, max_amount_cents, transaction_type, category_id, created_at
+INSERT INTO float.rules (bucket_id, name, priority, description_contains, min_amount_cents, max_amount_cents, transaction_type, category_id, date_from, date_to, foreign_currency_code)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+RETURNING rule_id, bucket_id, name, priority, description_contains, min_amount_cents, max_amount_cents, transaction_type, category_id, date_from, date_to, foreign_currency_code, created_at
 `
 
 type CreateRuleParams struct {
@@ -28,9 +29,28 @@ type CreateRuleParams struct {
 	MaxAmountCents      sql.NullInt64
 	TransactionType     sql.NullString
 	CategoryID          sql.NullString
+	DateFrom            sql.NullTime
+	DateTo              sql.NullTime
+	ForeignCurrencyCode sql.NullString
 }
 
-func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (FloatRule, error) {
+type CreateRuleRow struct {
+	RuleID              uuid.UUID
+	BucketID            uuid.UUID
+	Name                string
+	Priority            int32
+	DescriptionContains sql.NullString
+	MinAmountCents      sql.NullInt64
+	MaxAmountCents      sql.NullInt64
+	TransactionType     sql.NullString
+	CategoryID          sql.NullString
+	DateFrom            sql.NullTime
+	DateTo              sql.NullTime
+	ForeignCurrencyCode sql.NullString
+	CreatedAt           time.Time
+}
+
+func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (CreateRuleRow, error) {
 	row := q.db.QueryRowContext(ctx, createRule,
 		arg.BucketID,
 		arg.Name,
@@ -40,8 +60,11 @@ func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (FloatRu
 		arg.MaxAmountCents,
 		arg.TransactionType,
 		arg.CategoryID,
+		arg.DateFrom,
+		arg.DateTo,
+		arg.ForeignCurrencyCode,
 	)
-	var i FloatRule
+	var i CreateRuleRow
 	err := row.Scan(
 		&i.RuleID,
 		&i.BucketID,
@@ -52,6 +75,9 @@ func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (FloatRu
 		&i.MaxAmountCents,
 		&i.TransactionType,
 		&i.CategoryID,
+		&i.DateFrom,
+		&i.DateTo,
+		&i.ForeignCurrencyCode,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -71,7 +97,9 @@ func (q *Queries) DeleteRule(ctx context.Context, ruleID uuid.UUID, userID uuid.
 const listRulesByBucket = `-- name: ListRulesByBucket :many
 SELECT r.rule_id, r.bucket_id, r.name, r.priority,
        r.description_contains, r.min_amount_cents, r.max_amount_cents,
-       r.transaction_type, r.category_id, r.created_at,
+       r.transaction_type, r.category_id,
+       r.date_from, r.date_to, r.foreign_currency_code,
+       r.created_at,
        b.name AS bucket_name
 FROM float.rules r
 JOIN float.buckets b USING (bucket_id)
@@ -89,6 +117,9 @@ type ListRulesByBucketRow struct {
 	MaxAmountCents      sql.NullInt64
 	TransactionType     sql.NullString
 	CategoryID          sql.NullString
+	DateFrom            sql.NullTime
+	DateTo              sql.NullTime
+	ForeignCurrencyCode sql.NullString
 	CreatedAt           time.Time
 	BucketName          string
 }
@@ -112,6 +143,9 @@ func (q *Queries) ListRulesByBucket(ctx context.Context, bucketID uuid.UUID, use
 			&i.MaxAmountCents,
 			&i.TransactionType,
 			&i.CategoryID,
+			&i.DateFrom,
+			&i.DateTo,
+			&i.ForeignCurrencyCode,
 			&i.CreatedAt,
 			&i.BucketName,
 		); err != nil {
@@ -131,7 +165,9 @@ func (q *Queries) ListRulesByBucket(ctx context.Context, bucketID uuid.UUID, use
 const listRulesForUser = `-- name: ListRulesForUser :many
 SELECT r.rule_id, r.bucket_id, r.name, r.priority,
        r.description_contains, r.min_amount_cents, r.max_amount_cents,
-       r.transaction_type, r.category_id, r.created_at,
+       r.transaction_type, r.category_id,
+       r.date_from, r.date_to, r.foreign_currency_code,
+       r.created_at,
        b.name AS bucket_name
 FROM float.rules r
 JOIN float.buckets b USING (bucket_id)
@@ -149,6 +185,9 @@ type ListRulesForUserRow struct {
 	MaxAmountCents      sql.NullInt64
 	TransactionType     sql.NullString
 	CategoryID          sql.NullString
+	DateFrom            sql.NullTime
+	DateTo              sql.NullTime
+	ForeignCurrencyCode sql.NullString
 	CreatedAt           time.Time
 	BucketName          string
 }
@@ -172,6 +211,9 @@ func (q *Queries) ListRulesForUser(ctx context.Context, userID uuid.UUID) ([]Lis
 			&i.MaxAmountCents,
 			&i.TransactionType,
 			&i.CategoryID,
+			&i.DateFrom,
+			&i.DateTo,
+			&i.ForeignCurrencyCode,
 			&i.CreatedAt,
 			&i.BucketName,
 		); err != nil {
@@ -189,26 +231,40 @@ func (q *Queries) ListRulesForUser(ctx context.Context, userID uuid.UUID) ([]Lis
 }
 
 const listUpTransactionsByBucketID = `-- name: ListUpTransactionsByBucketID :many
-SELECT transaction_id, bucket_id, description, message, amount_cents, display_amount, currency_code, created_at, transaction_type, raw_json, category_id FROM float.up_transactions WHERE bucket_id = $1
+SELECT transaction_id, bucket_id, description, message, amount_cents, foreign_currency_code, foreign_amount_cents, created_at, transaction_type, raw_json, category_id FROM float.up_transactions WHERE bucket_id = $1
 `
 
-func (q *Queries) ListUpTransactionsByBucketID(ctx context.Context, bucketID uuid.UUID) ([]FloatUpTransaction, error) {
+type ListUpTransactionsByBucketIDRow struct {
+	TransactionID       uuid.UUID
+	BucketID            uuid.UUID
+	Description         string
+	Message             string
+	AmountCents         int64
+	ForeignCurrencyCode sql.NullString
+	ForeignAmountCents  sql.NullInt64
+	CreatedAt           time.Time
+	TransactionType     sql.NullString
+	RawJson             json.RawMessage
+	CategoryID          sql.NullString
+}
+
+func (q *Queries) ListUpTransactionsByBucketID(ctx context.Context, bucketID uuid.UUID) ([]ListUpTransactionsByBucketIDRow, error) {
 	rows, err := q.db.QueryContext(ctx, listUpTransactionsByBucketID, bucketID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []FloatUpTransaction
+	var items []ListUpTransactionsByBucketIDRow
 	for rows.Next() {
-		var i FloatUpTransaction
+		var i ListUpTransactionsByBucketIDRow
 		if err := rows.Scan(
 			&i.TransactionID,
 			&i.BucketID,
 			&i.Description,
 			&i.Message,
 			&i.AmountCents,
-			&i.DisplayAmount,
-			&i.CurrencyCode,
+			&i.ForeignCurrencyCode,
+			&i.ForeignAmountCents,
 			&i.CreatedAt,
 			&i.TransactionType,
 			&i.RawJson,
@@ -235,10 +291,13 @@ SET name                 = $2,
     min_amount_cents     = $5,
     max_amount_cents     = $6,
     transaction_type     = $7,
-    category_id          = $8
+    category_id          = $8,
+    date_from            = $9,
+    date_to              = $10,
+    foreign_currency_code = $11
 FROM float.buckets b
-WHERE r.rule_id = $1 AND r.bucket_id = b.bucket_id AND b.user_id = $9
-RETURNING r.rule_id, r.bucket_id, r.name, r.priority, r.description_contains, r.min_amount_cents, r.max_amount_cents, r.transaction_type, r.category_id, r.created_at
+WHERE r.rule_id = $1 AND r.bucket_id = b.bucket_id AND b.user_id = $12
+RETURNING r.rule_id, r.bucket_id, r.name, r.priority, r.description_contains, r.min_amount_cents, r.max_amount_cents, r.transaction_type, r.category_id, r.date_from, r.date_to, r.foreign_currency_code, r.created_at
 `
 
 type UpdateRuleParams struct {
@@ -250,10 +309,29 @@ type UpdateRuleParams struct {
 	MaxAmountCents      sql.NullInt64
 	TransactionType     sql.NullString
 	CategoryID          sql.NullString
+	DateFrom            sql.NullTime
+	DateTo              sql.NullTime
+	ForeignCurrencyCode sql.NullString
 	UserID              uuid.UUID
 }
 
-func (q *Queries) UpdateRule(ctx context.Context, arg UpdateRuleParams) (FloatRule, error) {
+type UpdateRuleRow struct {
+	RuleID              uuid.UUID
+	BucketID            uuid.UUID
+	Name                string
+	Priority            int32
+	DescriptionContains sql.NullString
+	MinAmountCents      sql.NullInt64
+	MaxAmountCents      sql.NullInt64
+	TransactionType     sql.NullString
+	CategoryID          sql.NullString
+	DateFrom            sql.NullTime
+	DateTo              sql.NullTime
+	ForeignCurrencyCode sql.NullString
+	CreatedAt           time.Time
+}
+
+func (q *Queries) UpdateRule(ctx context.Context, arg UpdateRuleParams) (UpdateRuleRow, error) {
 	row := q.db.QueryRowContext(ctx, updateRule,
 		arg.RuleID,
 		arg.Name,
@@ -263,9 +341,12 @@ func (q *Queries) UpdateRule(ctx context.Context, arg UpdateRuleParams) (FloatRu
 		arg.MaxAmountCents,
 		arg.TransactionType,
 		arg.CategoryID,
+		arg.DateFrom,
+		arg.DateTo,
+		arg.ForeignCurrencyCode,
 		arg.UserID,
 	)
-	var i FloatRule
+	var i UpdateRuleRow
 	err := row.Scan(
 		&i.RuleID,
 		&i.BucketID,
@@ -276,6 +357,9 @@ func (q *Queries) UpdateRule(ctx context.Context, arg UpdateRuleParams) (FloatRu
 		&i.MaxAmountCents,
 		&i.TransactionType,
 		&i.CategoryID,
+		&i.DateFrom,
+		&i.DateTo,
+		&i.ForeignCurrencyCode,
 		&i.CreatedAt,
 	)
 	return i, err

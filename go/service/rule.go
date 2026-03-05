@@ -14,17 +14,20 @@ import (
 )
 
 type Rule struct {
-	RuleID              uuid.UUID `json:"rule_id"`
-	BucketID            uuid.UUID `json:"bucket_id"`
-	BucketName          string    `json:"bucket_name"`
-	Name                string    `json:"name"`
-	Priority            int32     `json:"priority"`
-	DescriptionContains *string   `json:"description_contains"`
-	MinAmountCents      *int64    `json:"min_amount_cents"`
-	MaxAmountCents      *int64    `json:"max_amount_cents"`
-	TransactionType     *string   `json:"transaction_type"`
-	CategoryID          *string   `json:"category_id"`
-	CreatedAt           time.Time `json:"created_at"`
+	RuleID              uuid.UUID  `json:"rule_id"`
+	BucketID            uuid.UUID  `json:"bucket_id"`
+	BucketName          string     `json:"bucket_name"`
+	Name                string     `json:"name"`
+	Priority            int32      `json:"priority"`
+	DescriptionContains *string    `json:"description_contains"`
+	MinAmountCents      *int64     `json:"min_amount_cents"`
+	MaxAmountCents      *int64     `json:"max_amount_cents"`
+	TransactionType     *string    `json:"transaction_type"`
+	CategoryID          *string    `json:"category_id"`
+	DateFrom            *time.Time `json:"date_from"`
+	DateTo              *time.Time `json:"date_to"`
+	ForeignCurrencyCode *string    `json:"foreign_currency_code"`
+	CreatedAt           time.Time  `json:"created_at"`
 }
 
 type RuleService struct {
@@ -69,6 +72,9 @@ func (s *RuleService) CreateRule(ctx context.Context, rule Rule) (Rule, error) {
 		MaxAmountCents:      nullableInt64(rule.MaxAmountCents),
 		TransactionType:     nullableString(rule.TransactionType),
 		CategoryID:          nullableString(rule.CategoryID),
+		DateFrom:            nullableTime(rule.DateFrom),
+		DateTo:              nullableTime(rule.DateTo),
+		ForeignCurrencyCode: nullableString(rule.ForeignCurrencyCode),
 	})
 	if err != nil {
 		return Rule{}, err
@@ -88,6 +94,9 @@ func (s *RuleService) UpdateRule(ctx context.Context, rule Rule, userID uuid.UUI
 		MaxAmountCents:      nullableInt64(rule.MaxAmountCents),
 		TransactionType:     nullableString(rule.TransactionType),
 		CategoryID:          nullableString(rule.CategoryID),
+		DateFrom:            nullableTime(rule.DateFrom),
+		DateTo:              nullableTime(rule.DateTo),
+		ForeignCurrencyCode: nullableString(rule.ForeignCurrencyCode),
 		UserID:              userID,
 	})
 	if errors.Is(err, sql.ErrNoRows) {
@@ -122,7 +131,7 @@ func (s *RuleService) ApplyRulesToGeneral(ctx context.Context, userID uuid.UUID)
 
 	count := 0
 	for _, tx := range txs {
-		matched, err := applyRules(ctx, s.q, userID, tx.TransactionID, tx.Description, tx.AmountCents, tx.TransactionType, tx.CategoryID)
+		matched, err := applyRules(ctx, s.q, userID, tx.TransactionID, tx.Description, tx.AmountCents, tx.TransactionType, tx.CategoryID, tx.CreatedAt, tx.ForeignCurrencyCode)
 		if err != nil {
 			log.Printf("applyRules for tx %s: %v", tx.TransactionID, err)
 			continue
@@ -134,14 +143,14 @@ func (s *RuleService) ApplyRulesToGeneral(ctx context.Context, userID uuid.UUID)
 	return count, nil
 }
 
-func applyRules(ctx context.Context, q database.Querier, userID, txID uuid.UUID, description string, amountCents int64, txType, categoryID sql.NullString) (bool, error) {
+func applyRules(ctx context.Context, q database.Querier, userID, txID uuid.UUID, description string, amountCents int64, txType, categoryID sql.NullString, createdAt time.Time, foreignCurrencyCode sql.NullString) (bool, error) {
 	rules, err := q.ListRulesForUser(ctx, userID)
 	if err != nil {
 		return false, err
 	}
 
 	for _, r := range rules {
-		if !matchesRule(r, description, amountCents, txType, categoryID) {
+		if !matchesRule(r, description, amountCents, txType, categoryID, createdAt, foreignCurrencyCode) {
 			continue
 		}
 		return true, q.AssignTransactionToBucket(ctx, txID, r.BucketID)
@@ -149,7 +158,7 @@ func applyRules(ctx context.Context, q database.Querier, userID, txID uuid.UUID,
 	return false, nil
 }
 
-func matchesRule(r database.ListRulesForUserRow, description string, amountCents int64, txType, categoryID sql.NullString) bool {
+func matchesRule(r database.ListRulesForUserRow, description string, amountCents int64, txType, categoryID sql.NullString, createdAt time.Time, foreignCurrencyCode sql.NullString) bool {
 	if r.DescriptionContains.Valid {
 		if !strings.Contains(strings.ToLower(description), strings.ToLower(r.DescriptionContains.String)) {
 			return false
@@ -172,6 +181,23 @@ func matchesRule(r database.ListRulesForUserRow, description string, amountCents
 	}
 	if r.CategoryID.Valid {
 		if !categoryID.Valid || categoryID.String != r.CategoryID.String {
+			return false
+		}
+	}
+	if r.DateFrom.Valid {
+		day := createdAt.UTC().Truncate(24 * time.Hour)
+		if day.Before(r.DateFrom.Time.UTC().Truncate(24 * time.Hour)) {
+			return false
+		}
+	}
+	if r.DateTo.Valid {
+		day := createdAt.UTC().Truncate(24 * time.Hour)
+		if day.After(r.DateTo.Time.UTC().Truncate(24 * time.Hour)) {
+			return false
+		}
+	}
+	if r.ForeignCurrencyCode.Valid {
+		if !foreignCurrencyCode.Valid || foreignCurrencyCode.String != r.ForeignCurrencyCode.String {
 			return false
 		}
 	}
@@ -202,6 +228,15 @@ func dbRowToRule(r database.ListRulesForUserRow) Rule {
 	if r.CategoryID.Valid {
 		rule.CategoryID = &r.CategoryID.String
 	}
+	if r.DateFrom.Valid {
+		rule.DateFrom = &r.DateFrom.Time
+	}
+	if r.DateTo.Valid {
+		rule.DateTo = &r.DateTo.Time
+	}
+	if r.ForeignCurrencyCode.Valid {
+		rule.ForeignCurrencyCode = &r.ForeignCurrencyCode.String
+	}
 	return rule
 }
 
@@ -217,4 +252,11 @@ func nullableInt64(n *int64) sql.NullInt64 {
 		return sql.NullInt64{}
 	}
 	return sql.NullInt64{Int64: *n, Valid: true}
+}
+
+func nullableTime(t *time.Time) sql.NullTime {
+	if t == nil {
+		return sql.NullTime{}
+	}
+	return sql.NullTime{Time: *t, Valid: true}
 }

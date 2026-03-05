@@ -9,21 +9,24 @@ import (
 	"github.com/google/uuid"
 
 	"dbut.dev/float/go/database"
+	"dbut.dev/float/go/utils"
 )
 
 type Transaction struct {
-	TransactionID   uuid.UUID       `json:"transaction_id"`
-	BucketID        uuid.UUID       `json:"bucket_id"`
-	UserID          uuid.UUID       `json:"-"`
-	Description     string          `json:"description,omitempty"`
-	Message         string          `json:"message,omitempty"`
-	AmountCents     int64           `json:"amount_cents"`
-	DisplayAmount   string          `json:"display_amount,omitempty"`
-	CurrencyCode    string          `json:"currency_code,omitempty"`
-	CreatedAt       time.Time       `json:"created_at"`
-	IsTransaction   bool            `json:"is_transaction"`
-	TransactionType *string         `json:"transaction_type,omitempty"`
-	RawJson         json.RawMessage `json:"raw_json,omitempty"`
+	TransactionID        uuid.UUID       `json:"transaction_id"`
+	BucketID             uuid.UUID       `json:"bucket_id"`
+	UserID               uuid.UUID       `json:"-"`
+	Description          string          `json:"description,omitempty"`
+	Message              string          `json:"message,omitempty"`
+	AmountCents          int64           `json:"amount_cents"`
+	DisplayAmount        string          `json:"display_amount"`
+	CreatedAt            time.Time       `json:"created_at"`
+	IsTransaction        bool            `json:"is_transaction"`
+	TransactionType      *string         `json:"transaction_type,omitempty"`
+	RawJson              json.RawMessage `json:"raw_json,omitempty"`
+	ForeignCurrencyCode  *string         `json:"foreign_currency_code,omitempty"`
+	ForeignAmountCents   *int64          `json:"foreign_amount_cents,omitempty"`
+	ForeignDisplayAmount *string         `json:"foreign_display_amount,omitempty"`
 }
 
 type TransactionService struct {
@@ -51,18 +54,25 @@ func (s *TransactionService) CreateTransaction(ctx context.Context, tx Transacti
 	if tx.TransactionType != nil {
 		txType = sql.NullString{String: *tx.TransactionType, Valid: true}
 	}
+	var foreignCurrencyCode sql.NullString
+	var foreignAmountCents sql.NullInt64
+	if tx.ForeignCurrencyCode != nil {
+		foreignCurrencyCode = sql.NullString{String: *tx.ForeignCurrencyCode, Valid: true}
+	}
+	if tx.ForeignAmountCents != nil {
+		foreignAmountCents = sql.NullInt64{Int64: *tx.ForeignAmountCents, Valid: true}
+	}
 	_, err := s.q.UpsertUpTransaction(ctx, database.UpsertUpTransactionParams{
-		TransactionID:   tx.TransactionID,
-		UserID:          tx.UserID,
-		Description:     tx.Description,
-		Message:         tx.Message,
-		AmountCents:     tx.AmountCents,
-		DisplayAmount:   tx.DisplayAmount,
-		CurrencyCode:    tx.CurrencyCode,
-		CreatedAt:       tx.CreatedAt,
-		TransactionType: txType,
-		//DeepLinkUrl:     tx.DeepLinkUrl,
-		RawJson: tx.RawJson,
+		TransactionID:       tx.TransactionID,
+		UserID:              tx.UserID,
+		Description:         tx.Description,
+		Message:             tx.Message,
+		AmountCents:         tx.AmountCents,
+		CreatedAt:           tx.CreatedAt,
+		TransactionType:     txType,
+		RawJson:             tx.RawJson,
+		ForeignCurrencyCode: foreignCurrencyCode,
+		ForeignAmountCents:  foreignAmountCents,
 	})
 	if err != nil {
 		return Transaction{}, err
@@ -79,12 +89,26 @@ func toTransactions(rows []database.FloatBucketLedger) []Transaction {
 			Description:   r.Description,
 			Message:       r.Message,
 			AmountCents:   r.AmountCents,
-			DisplayAmount: r.DisplayAmount,
-			CurrencyCode:  r.CurrencyCode,
+			DisplayAmount: utils.FormatSignedAmount(r.AmountCents, "AUD"),
 			CreatedAt:     r.CreatedAt,
 			IsTransaction: r.IsTransaction,
-			//DeepLinkUrl:   r.DeepLinkUrl,
+		}
+		if r.ForeignCurrencyCode.Valid && r.ForeignAmountCents.Valid {
+			txs[i].ForeignCurrencyCode = &r.ForeignCurrencyCode.String
+			txs[i].ForeignAmountCents = &r.ForeignAmountCents.Int64
+			display := utils.FormatSignedAmount(r.ForeignAmountCents.Int64, r.ForeignCurrencyCode.String)
+			txs[i].ForeignDisplayAmount = &display
 		}
 	}
 	return txs
+}
+
+// FormatCurrencyAmount delegates to utils.FormatAmount.
+func FormatCurrencyAmount(baseUnits int64, currencyCode string) string {
+	return utils.FormatAmount(baseUnits, currencyCode)
+}
+
+// FormatSignedAmount delegates to utils.FormatAmount.
+func FormatSignedAmount(baseUnits int64, currencyCode string) string {
+	return utils.FormatAmount(baseUnits, currencyCode)
 }

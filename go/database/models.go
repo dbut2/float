@@ -19,18 +19,19 @@ type FloatBucket struct {
 	IsGeneral    bool
 	CreatedAt    time.Time
 	DisplayOrder sql.NullInt32
+	CurrencyCode sql.NullString
 }
 
 type FloatBucketLedger struct {
-	TransactionID uuid.UUID
-	BucketID      uuid.UUID
-	Description   string
-	Message       string
-	AmountCents   int64
-	DisplayAmount string
-	CurrencyCode  string
-	CreatedAt     time.Time
-	IsTransaction bool
+	TransactionID       uuid.UUID
+	BucketID            uuid.UUID
+	Description         string
+	Message             string
+	AmountCents         int64
+	ForeignCurrencyCode sql.NullString
+	ForeignAmountCents  sql.NullInt64
+	CreatedAt           time.Time
+	IsTransaction       bool
 }
 
 type FloatBucketTransfer struct {
@@ -59,6 +60,13 @@ type FloatFcmToken struct {
 	FcmToken string
 }
 
+type FloatFxRate struct {
+	BaseCurrency  string
+	QuoteCurrency string
+	Rate          float64
+	Date          time.Time
+}
+
 type FloatRule struct {
 	RuleID              uuid.UUID
 	BucketID            uuid.UUID
@@ -70,20 +78,23 @@ type FloatRule struct {
 	TransactionType     sql.NullString
 	CategoryID          sql.NullString
 	CreatedAt           time.Time
+	DateFrom            sql.NullTime
+	DateTo              sql.NullTime
+	ForeignCurrencyCode sql.NullString
 }
 
 type FloatUpTransaction struct {
-	TransactionID   uuid.UUID
-	BucketID        uuid.UUID
-	Description     string
-	Message         string
-	AmountCents     int64
-	DisplayAmount   string
-	CurrencyCode    string
-	CreatedAt       time.Time
-	TransactionType sql.NullString
-	RawJson         json.RawMessage
-	CategoryID      sql.NullString
+	TransactionID       uuid.UUID
+	BucketID            uuid.UUID
+	Description         string
+	Message             string
+	AmountCents         int64
+	CreatedAt           time.Time
+	TransactionType     sql.NullString
+	RawJson             json.RawMessage
+	CategoryID          sql.NullString
+	ForeignCurrencyCode sql.NullString
+	ForeignAmountCents  sql.NullInt64
 }
 
 type FloatUser struct {

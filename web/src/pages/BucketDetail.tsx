@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, Filter, Inbox, RotateCw, Trash2, X } from 'lucide-react'
-import { api, formatAUD, formatDate, type Transaction, type Transfer, type Trickle } from '../lib/api'
+import { api, formatDate, type Transaction, type Transfer, type Trickle } from '../lib/api'
 import AssignSheet from '../components/AssignSheet'
 import RulesSheet from '../components/RulesSheet'
 import TransferSheet from '../components/TransferSheet'
@@ -13,13 +13,54 @@ import { useMediaQuery } from '../hooks/useMediaQuery'
 
 type ListItem =
   | { kind: 'transaction'; tx: Transaction }
-  | { kind: 'transfer'; t: Transfer; amountCents: number }
+  | { kind: 'transfer'; t: Transfer; displayAmount: string; foreignDisplayAmount?: string | null; foreignCurrencyCode?: string | null }
   | { kind: 'trickle'; tx: Transaction }
 
 function isTrickleEntry(tx: Transaction, bucketTransfers: Transfer[]): boolean {
   if (tx.is_transaction) return false
   const txTime = new Date(tx.created_at).getTime()
   return !bucketTransfers.some((t) => Math.abs(new Date(t.created_at).getTime() - txTime) < 1000)
+}
+
+function amountDisplay(
+  isDebit: boolean,
+  audDisplay: string,
+  foreignDisplay?: string | null,
+  foreignCode?: string | null,
+  foreignPrimary = false,
+) {
+  if (foreignPrimary && foreignDisplay) {
+    // Travel bucket with FX: foreign currency is headline, AUD is secondary
+    return (
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <span className={isDebit ? 'amount-negative' : 'amount-positive'} style={{ fontSize: 15, fontWeight: 600, display: 'block' }}>
+          {foreignDisplay}
+        </span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+          {audDisplay} AUD
+        </span>
+      </div>
+    )
+  }
+  if (foreignDisplay) {
+    // AUD bucket or travel without FX: AUD is headline, foreign is secondary
+    return (
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <span className={isDebit ? 'amount-negative' : 'amount-positive'} style={{ fontSize: 15, fontWeight: 600, display: 'block' }}>
+          {audDisplay}
+        </span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+          {foreignDisplay}{foreignCode ? ` ${foreignCode}` : ''}
+        </span>
+      </div>
+    )
+  }
+  // AUD only
+  return (
+    <span className={isDebit ? 'amount-negative' : 'amount-positive'} style={{ fontSize: 15, fontWeight: 600, flexShrink: 0 }}>
+      {audDisplay}
+    </span>
+  )
 }
 
 export default function BucketDetail() {
@@ -64,6 +105,10 @@ export default function BucketDetail() {
     t.from_bucket_id === bucketId || t.to_bucket_id === bucketId,
   )
 
+  const isTravel = !!bucket?.currency_code
+  const hasFX = !!bucket?.fx_rate
+  const showForeignPrimary = isTravel && hasFX
+
   const listItems: ListItem[] = [
     ...bucketTx.map((tx): ListItem => {
       if (!tx.is_transaction) {
@@ -73,7 +118,7 @@ export default function BucketDetail() {
         const txTime = new Date(tx.created_at).getTime()
         const matched = allTransfers.find((t) => Math.abs(new Date(t.created_at).getTime() - txTime) < 1000)
         if (matched) {
-          return { kind: 'transfer', t: matched, amountCents: tx.amount_cents }
+          return { kind: 'transfer', t: matched, displayAmount: tx.display_amount, foreignDisplayAmount: tx.foreign_display_amount, foreignCurrencyCode: tx.foreign_currency_code }
         }
       }
       return { kind: 'transaction', tx }
@@ -245,7 +290,7 @@ export default function BucketDetail() {
                 <RotateCw size={20} color="var(--accent)" strokeWidth={1.75} style={{ flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>
-                    {formatAUD(trickle.amount_cents)} · {periodLabel(trickle)}
+                    {trickle.display_amount} · {periodLabel(trickle)}
                   </p>
                   {trickle.description && (
                     <p className="line-clamp-1" style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{trickle.description}</p>
@@ -357,7 +402,7 @@ export default function BucketDetail() {
           listItems.map((item, idx) => {
             if (item.kind === 'transaction') {
               const tx = item.tx
-              const isDebit = tx.amount_cents < 0
+              const isDebit = tx.display_amount.startsWith("-")
               return (
                 <button
                   key={`tx-${idx}`}
@@ -398,19 +443,14 @@ export default function BucketDetail() {
                       {formatDate(tx.created_at)}
                     </p>
                   </div>
-                  <span
-                    className={isDebit ? 'amount-negative' : 'amount-positive'}
-                    style={{ fontSize: 15, fontWeight: 600, flexShrink: 0 }}
-                  >
-                    {isDebit ? '−' : '+'}{formatAUD(tx.amount_cents)}
-                  </span>
+                  {amountDisplay(isDebit, tx.display_amount, tx.foreign_display_amount, tx.foreign_currency_code, showForeignPrimary)}
                 </button>
               )
             }
 
             if (item.kind === 'trickle') {
               const tx = item.tx
-              const isDebit = tx.amount_cents < 0
+              const isDebit = tx.display_amount.startsWith("-")
               const label = tx.description
               const txDate = new Date(tx.created_at)
               const isActive = Math.abs(Date.now() - txDate.getTime()) < 300000
@@ -453,19 +493,14 @@ export default function BucketDetail() {
                       </p>
                     )}
                   </div>
-                  <span
-                    className={isDebit ? 'amount-negative' : 'amount-positive'}
-                    style={{ fontSize: 15, fontWeight: 600, flexShrink: 0 }}
-                  >
-                    {isDebit ? '−' : '+'}{formatAUD(Math.abs(tx.amount_cents))}
-                  </span>
+                  {amountDisplay(isDebit, tx.display_amount, tx.foreign_display_amount, tx.foreign_currency_code, showForeignPrimary)}
                 </div>
               )
             }
 
             // Transfer item
-            const { t, amountCents } = item
-            const isDebit = amountCents < 0
+            const { t, displayAmount, foreignDisplayAmount, foreignCurrencyCode } = item
+            const isDebit = displayAmount.startsWith('-')
             const otherName = isDebit
               ? (t.to_bucket_name || 'General')
               : (t.from_bucket_name || 'General')
@@ -507,12 +542,7 @@ export default function BucketDetail() {
                     {formatDate(t.created_at)}
                   </p>
                 </div>
-                <span
-                  className={isDebit ? 'amount-negative' : 'amount-positive'}
-                  style={{ fontSize: 15, fontWeight: 600, flexShrink: 0 }}
-                >
-                  {isDebit ? '−' : '+'}{formatAUD(Math.abs(amountCents))}
-                </span>
+                {amountDisplay(isDebit, displayAmount, foreignDisplayAmount, foreignCurrencyCode, showForeignPrimary)}
               </div>
             )
           })
@@ -541,11 +571,22 @@ export default function BucketDetail() {
           >
             BALANCE
           </p>
-          <p className="amount-neutral" style={{ fontSize: 24, fontWeight: 600 }}>
-            {bucket
-              ? `${bucket.balance_cents < 0 ? '−' : ''}${formatAUD(Math.abs(bucket.balance_cents))}`
-              : '—'}
-          </p>
+          {bucket?.foreign_balance_display ? (
+            <div style={{ textAlign: 'right' }}>
+              <p className={bucket.balance_display.startsWith("-") ? 'amount-negative' : 'amount-positive'} style={{ fontSize: 24, fontWeight: 600 }}>
+                {bucket.foreign_balance_display} {bucket.currency_code}
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 3 }}>
+                {bucket.balance_display} AUD
+              </p>
+            </div>
+          ) : (
+            <p className="amount-neutral" style={{ fontSize: 24, fontWeight: 600 }}>
+              {bucket
+                ? bucket.balance_display
+                : '—'}
+            </p>
+          )}
         </div>
       </div>
 

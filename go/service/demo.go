@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"dbut.dev/float/go/utils"
 )
 
 //go:embed data/demo.json
@@ -22,21 +24,22 @@ type demoData struct {
 }
 
 type demoBucketData struct {
-	BucketID  uuid.UUID `json:"bucket_id"`
-	Name      string    `json:"name"`
-	IsGeneral bool      `json:"is_general"`
-	CreatedAt time.Time `json:"created_at"`
+	BucketID     uuid.UUID `json:"bucket_id"`
+	Name         string    `json:"name"`
+	IsGeneral    bool      `json:"is_general"`
+	CreatedAt    time.Time `json:"created_at"`
+	CurrencyCode *string   `json:"currency_code"`
 }
 
 type demoTxData struct {
-	TransactionID uuid.UUID `json:"transaction_id"`
-	BucketID      uuid.UUID `json:"bucket_id"`
-	Description   string    `json:"description"`
-	Message       string    `json:"message"`
-	AmountCents   int64     `json:"amount_cents"`
-	DisplayAmount string    `json:"display_amount"`
-	CurrencyCode  string    `json:"currency_code"`
-	CreatedAt     time.Time `json:"created_at"`
+	TransactionID       uuid.UUID `json:"transaction_id"`
+	BucketID            uuid.UUID `json:"bucket_id"`
+	Description         string    `json:"description"`
+	Message             string    `json:"message"`
+	AmountCents         int64     `json:"amount_cents"`
+	CreatedAt           time.Time `json:"created_at"`
+	ForeignCurrencyCode *string   `json:"foreign_currency_code"`
+	ForeignAmountCents  *int64    `json:"foreign_amount_cents"`
 }
 
 type demoTranserData struct {
@@ -91,30 +94,51 @@ func NewDemoService() *DemoService {
 
 	bucketNames := make(map[uuid.UUID]string)
 
+	// Demo FX rates (static, for display only)
+	demoRates := map[string]float64{
+		"CNY": 4.72,
+		"JPY": 95.3,
+		"USD": 0.63,
+		"EUR": 0.58,
+	}
+
 	for _, b := range data.Buckets {
 		bucketNames[b.BucketID] = b.Name
-		s.buckets = append(s.buckets, Bucket{
-			BucketID:  b.BucketID,
-			UserID:    data.User.UserID,
-			Name:      b.Name,
-			IsGeneral: b.IsGeneral,
-			CreatedAt: b.CreatedAt,
-		})
+		bucket := Bucket{
+			BucketID:     b.BucketID,
+			UserID:       data.User.UserID,
+			Name:         b.Name,
+			IsGeneral:    b.IsGeneral,
+			CreatedAt:    b.CreatedAt,
+			CurrencyCode: b.CurrencyCode,
+		}
+		if b.CurrencyCode != nil {
+			if rate, ok := demoRates[*b.CurrencyCode]; ok {
+				bucket.FXRate = &rate
+			}
+		}
+		s.buckets = append(s.buckets, bucket)
 	}
 
 	for _, tx := range data.Transactions {
-		s.ledger = append(s.ledger, Transaction{
+		t := Transaction{
 			TransactionID: tx.TransactionID,
 			BucketID:      tx.BucketID,
 			UserID:        data.User.UserID,
 			Description:   tx.Description,
 			Message:       tx.Message,
 			AmountCents:   tx.AmountCents,
-			DisplayAmount: tx.DisplayAmount,
-			CurrencyCode:  tx.CurrencyCode,
+			DisplayAmount: FormatSignedAmount(tx.AmountCents, "AUD"),
 			CreatedAt:     tx.CreatedAt,
 			IsTransaction: true,
-		})
+		}
+		t.ForeignCurrencyCode = tx.ForeignCurrencyCode
+		t.ForeignAmountCents = tx.ForeignAmountCents
+		if tx.ForeignCurrencyCode != nil && tx.ForeignAmountCents != nil {
+			display := FormatSignedAmount(*tx.ForeignAmountCents, *tx.ForeignCurrencyCode)
+			t.ForeignDisplayAmount = &display
+		}
+		s.ledger = append(s.ledger, t)
 	}
 
 	for _, t := range data.Transfers {
@@ -152,6 +176,11 @@ func NewDemoService() *DemoService {
 	}
 	for i := range s.buckets {
 		s.buckets[i].BalanceCents = balances[s.buckets[i].BucketID]
+		if s.buckets[i].CurrencyCode != nil && s.buckets[i].FXRate != nil {
+			display := utils.FormatForeignBalance(s.buckets[i].BalanceCents, *s.buckets[i].FXRate, *s.buckets[i].CurrencyCode)
+			s.buckets[i].ForeignBalanceDisplay = &display
+		}
+		s.buckets[i].setDisplays()
 	}
 
 	generalBucketID := uuid.UUID{}
@@ -239,7 +268,7 @@ func (s *DemoService) DeleteBucket(_ context.Context, _, _ uuid.UUID) error {
 	return nil
 }
 
-func (s *DemoService) ListBucketTransactions(_ context.Context, bucketID uuid.UUID) ([]Transaction, error) {
+func (s *DemoService) ListBucketTransactions(_ context.Context, bucketID, _ uuid.UUID) ([]Transaction, error) {
 	var txs []Transaction
 	for _, t := range s.ledger {
 		if t.BucketID == bucketID {

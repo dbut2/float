@@ -12,6 +12,7 @@ import (
 	floatDB "dbut.dev/float/db"
 	"dbut.dev/float/go/api"
 	"dbut.dev/float/go/database"
+	"dbut.dev/float/go/mastercard"
 	"dbut.dev/float/go/middleware"
 	"dbut.dev/float/go/static"
 	"dbut.dev/float/go/webhook"
@@ -50,9 +51,22 @@ func setup(r *gin.Engine) (*api.API, gin.HandlerFunc) {
 	runMigrations(db)
 	queries := database.New(db)
 
+	var mc *mastercard.FXClient
+	consumerKey := os.Getenv("MASTERCARD_CONSUMER_KEY")
+	sandbox := os.Getenv("MASTERCARD_SANDBOX") == "true"
+	var mcErr error
+	if p12Path := os.Getenv("MASTERCARD_KEY_PATH"); p12Path != "" {
+		mc, mcErr = mastercard.NewFXClientFromP12(consumerKey, p12Path, os.Getenv("MASTERCARD_KEY_PASSWORD"), sandbox)
+	} else {
+		mc, mcErr = mastercard.NewFXClientFromPEM(consumerKey, os.Getenv("MASTERCARD_PRIVATE_KEY"), sandbox)
+	}
+	if mcErr != nil {
+		log.Printf("Mastercard FX client not available: %v", mcErr)
+	}
+
 	webhook.New(queries).Register(r.Group("/webhook"))
 
-	return api.New(queries), middleware.Middleware(queries, os.Getenv("BASE_URL"))
+	return api.New(queries, mc), middleware.Middleware(queries, os.Getenv("BASE_URL"))
 }
 
 func runMigrations(db *sql.DB) {

@@ -1,8 +1,8 @@
 -- name: UpsertUpTransaction :one
 INSERT INTO float.up_transactions (
     transaction_id, bucket_id, description, message,
-    amount_cents, display_amount, currency_code, created_at, transaction_type,
-    raw_json, category_id
+    amount_cents, created_at, transaction_type,
+    raw_json, category_id, foreign_currency_code, foreign_amount_cents
 ) VALUES (
     $1,
     (SELECT bucket_id FROM float.buckets WHERE user_id = $2 AND is_general = TRUE),
@@ -12,12 +12,12 @@ ON CONFLICT (transaction_id) DO UPDATE SET
     description = EXCLUDED.description,
     message = EXCLUDED.message,
     amount_cents = EXCLUDED.amount_cents,
-    display_amount = EXCLUDED.display_amount,
-    currency_code = EXCLUDED.currency_code,
     created_at = EXCLUDED.created_at,
     transaction_type = EXCLUDED.transaction_type,
     raw_json = EXCLUDED.raw_json,
-    category_id = EXCLUDED.category_id
+    category_id = EXCLUDED.category_id,
+    foreign_currency_code = EXCLUDED.foreign_currency_code,
+    foreign_amount_cents = EXCLUDED.foreign_amount_cents
 RETURNING (xmax = 0) AS inserted;
 
 -- name: GetTransaction :one

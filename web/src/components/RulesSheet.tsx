@@ -18,6 +18,9 @@ type FormState = {
   maxAmountAud: string
   transactionType: string
   categoryId: string
+  dateFrom: string
+  dateTo: string
+  foreignCurrencyCode: string
 }
 
 const emptyForm = (): FormState => ({
@@ -28,6 +31,9 @@ const emptyForm = (): FormState => ({
   maxAmountAud: '',
   transactionType: '',
   categoryId: '',
+  dateFrom: '',
+  dateTo: '',
+  foreignCurrencyCode: '',
 })
 
 function ruleToForm(r: Rule): FormState {
@@ -39,6 +45,9 @@ function ruleToForm(r: Rule): FormState {
     maxAmountAud: r.max_amount_cents != null ? String(r.max_amount_cents / 100) : '',
     transactionType: r.transaction_type ?? '',
     categoryId: r.category_id ?? '',
+    dateFrom: r.date_from ? r.date_from.slice(0, 10) : '',
+    dateTo: r.date_to ? r.date_to.slice(0, 10) : '',
+    foreignCurrencyCode: r.foreign_currency_code ?? '',
   }
 }
 
@@ -210,8 +219,11 @@ export default function RulesSheet({ bucketId, onClose }: Props) {
                     {r.description_contains && ` · contains "${r.description_contains}"`}
                     {r.transaction_type && ` · type "${r.transaction_type}"`}
                     {r.category_id && ` · category "${r.category_id}"`}
+                    {r.foreign_currency_code && ` · currency ${r.foreign_currency_code}`}
                     {r.min_amount_cents != null && ` · min $${(r.min_amount_cents / 100).toFixed(2)}`}
                     {r.max_amount_cents != null && ` · max $${(r.max_amount_cents / 100).toFixed(2)}`}
+                    {r.date_from && ` · from ${r.date_from.slice(0, 10)}`}
+                    {r.date_to && ` · to ${r.date_to.slice(0, 10)}`}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -320,6 +332,35 @@ export default function RulesSheet({ bucketId, onClose }: Props) {
               style={{ ...inputStyle, marginBottom: 12 }}
             />
 
+            <label style={labelStyle}>FOREIGN CURRENCY CODE (OPTIONAL)</label>
+            <input
+              value={form.foreignCurrencyCode}
+              onChange={(e) => setForm({ ...form, foreignCurrencyCode: e.target.value.toUpperCase() })}
+              placeholder="e.g. JPY, CNY, USD"
+              style={{ ...inputStyle, marginBottom: 12 }}
+            />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+              <div>
+                <label style={labelStyle}>DATE FROM (OPTIONAL)</label>
+                <input
+                  type="date"
+                  value={form.dateFrom}
+                  onChange={(e) => setForm({ ...form, dateFrom: e.target.value })}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>DATE TO (OPTIONAL)</label>
+                <input
+                  type="date"
+                  value={form.dateTo}
+                  onChange={(e) => setForm({ ...form, dateTo: e.target.value })}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
             <label style={labelStyle}>PRIORITY (LOWER = FIRST)</label>
             <input
               type="number"
@@ -423,5 +464,8 @@ function formToPayload(form: FormState) {
     max_amount_aud: form.maxAmountAud !== '' ? parseFloat(form.maxAmountAud) : null,
     transaction_type: form.transactionType.trim() || null,
     category_id: form.categoryId.trim() || null,
+    date_from: form.dateFrom || null,
+    date_to: form.dateTo || null,
+    foreign_currency_code: form.foreignCurrencyCode.trim() || null,
   }
 }

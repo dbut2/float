@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"dbut.dev/float/go/database"
+	"dbut.dev/float/go/mastercard"
 	"dbut.dev/float/go/service"
 )
 
@@ -22,7 +23,7 @@ type BucketService interface {
 	CreateBucket(ctx context.Context, bucket service.Bucket) (service.Bucket, error)
 	GetBucket(ctx context.Context, bucketID, userID uuid.UUID) (service.Bucket, error)
 	DeleteBucket(ctx context.Context, bucketID, userID uuid.UUID) error
-	ListBucketTransactions(ctx context.Context, bucketID uuid.UUID) ([]service.Transaction, error)
+	ListBucketTransactions(ctx context.Context, bucketID, userID uuid.UUID) ([]service.Transaction, error)
 	ReorderBuckets(ctx context.Context, userID uuid.UUID, bucketIDs []uuid.UUID) error
 }
 
@@ -68,10 +69,11 @@ type API struct {
 	rules        RuleService
 }
 
-func New(q database.Querier) *API {
+func New(q database.Querier, mc *mastercard.FXClient) *API {
+	fx := service.NewFXService(q, mc)
 	return &API{
 		users:        service.NewUserService(q),
-		buckets:      service.NewBucketService(q),
+		buckets:      service.NewBucketService(q, fx),
 		transactions: service.NewTransactionService(q),
 		transfers:    service.NewTransferService(q),
 		push:         service.NewPushService(q),
