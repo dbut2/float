@@ -108,7 +108,7 @@ func FormatCurrencyAmount(baseUnits int64, currencyCode string) string {
 	return utils.FormatAmount(baseUnits, currencyCode)
 }
 
-// FormatSignedAmount delegates to utils.FormatSignedAmount.
+// FormatSignedAmount delegates to utils.FormatAmount.
 func FormatSignedAmount(baseUnits int64, currencyCode string) string {
-	return utils.FormatSignedAmount(baseUnits, currencyCode)
+	return utils.FormatAmount(baseUnits, currencyCode)
 }

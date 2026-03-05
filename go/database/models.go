@@ -77,10 +77,10 @@ type FloatRule struct {
 	MaxAmountCents      sql.NullInt64
 	TransactionType     sql.NullString
 	CategoryID          sql.NullString
+	CreatedAt           time.Time
 	DateFrom            sql.NullTime
 	DateTo              sql.NullTime
 	ForeignCurrencyCode sql.NullString
-	CreatedAt           time.Time
 }
 
 type FloatUpTransaction struct {

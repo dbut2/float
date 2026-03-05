@@ -573,7 +573,7 @@ export default function BucketDetail() {
           </p>
           {bucket?.foreign_balance_display ? (
             <div style={{ textAlign: 'right' }}>
-              <p className={bucket.balance_display.startsWith("-") ? 'amount-negative' : 'amount-neutral'} style={{ fontSize: 24, fontWeight: 600 }}>
+              <p className={bucket.balance_display.startsWith("-") ? 'amount-negative' : 'amount-positive'} style={{ fontSize: 24, fontWeight: 600 }}>
                 {bucket.foreign_balance_display} {bucket.currency_code}
               </p>
               <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 3 }}>

@@ -95,7 +95,7 @@ func (c *FXClient) GetConversionRate(ctx context.Context, base, quote string, da
 		return 0, err
 	}
 	if resp.JSON200 == nil {
-		return 0, fmt.Errorf("Mastercard API status %d: %s", resp.HTTPResponse.StatusCode, resp.Body)
+		return 0, fmt.Errorf("Mastercard API status %d: %s", resp.HTTPResponse.StatusCode, resp.Body) //nolint:staticcheck
 	}
 	mc := resp.JSON200.Data.Mastercard
 	if mc == nil || mc.MastercardConvRateExclAllFees == nil {

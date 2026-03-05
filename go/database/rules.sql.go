@@ -34,7 +34,23 @@ type CreateRuleParams struct {
 	ForeignCurrencyCode sql.NullString
 }
 
-func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (FloatRule, error) {
+type CreateRuleRow struct {
+	RuleID              uuid.UUID
+	BucketID            uuid.UUID
+	Name                string
+	Priority            int32
+	DescriptionContains sql.NullString
+	MinAmountCents      sql.NullInt64
+	MaxAmountCents      sql.NullInt64
+	TransactionType     sql.NullString
+	CategoryID          sql.NullString
+	DateFrom            sql.NullTime
+	DateTo              sql.NullTime
+	ForeignCurrencyCode sql.NullString
+	CreatedAt           time.Time
+}
+
+func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (CreateRuleRow, error) {
 	row := q.db.QueryRowContext(ctx, createRule,
 		arg.BucketID,
 		arg.Name,
@@ -48,7 +64,7 @@ func (q *Queries) CreateRule(ctx context.Context, arg CreateRuleParams) (FloatRu
 		arg.DateTo,
 		arg.ForeignCurrencyCode,
 	)
-	var i FloatRule
+	var i CreateRuleRow
 	err := row.Scan(
 		&i.RuleID,
 		&i.BucketID,
@@ -269,15 +285,15 @@ func (q *Queries) ListUpTransactionsByBucketID(ctx context.Context, bucketID uui
 
 const updateRule = `-- name: UpdateRule :one
 UPDATE float.rules r
-SET name                  = $2,
-    priority              = $3,
-    description_contains  = $4,
-    min_amount_cents      = $5,
-    max_amount_cents      = $6,
-    transaction_type      = $7,
-    category_id           = $8,
-    date_from             = $9,
-    date_to               = $10,
+SET name                 = $2,
+    priority             = $3,
+    description_contains = $4,
+    min_amount_cents     = $5,
+    max_amount_cents     = $6,
+    transaction_type     = $7,
+    category_id          = $8,
+    date_from            = $9,
+    date_to              = $10,
     foreign_currency_code = $11
 FROM float.buckets b
 WHERE r.rule_id = $1 AND r.bucket_id = b.bucket_id AND b.user_id = $12
@@ -299,7 +315,23 @@ type UpdateRuleParams struct {
 	UserID              uuid.UUID
 }
 
-func (q *Queries) UpdateRule(ctx context.Context, arg UpdateRuleParams) (FloatRule, error) {
+type UpdateRuleRow struct {
+	RuleID              uuid.UUID
+	BucketID            uuid.UUID
+	Name                string
+	Priority            int32
+	DescriptionContains sql.NullString
+	MinAmountCents      sql.NullInt64
+	MaxAmountCents      sql.NullInt64
+	TransactionType     sql.NullString
+	CategoryID          sql.NullString
+	DateFrom            sql.NullTime
+	DateTo              sql.NullTime
+	ForeignCurrencyCode sql.NullString
+	CreatedAt           time.Time
+}
+
+func (q *Queries) UpdateRule(ctx context.Context, arg UpdateRuleParams) (UpdateRuleRow, error) {
 	row := q.db.QueryRowContext(ctx, updateRule,
 		arg.RuleID,
 		arg.Name,
@@ -314,7 +346,7 @@ func (q *Queries) UpdateRule(ctx context.Context, arg UpdateRuleParams) (FloatRu
 		arg.ForeignCurrencyCode,
 		arg.UserID,
 	)
-	var i FloatRule
+	var i UpdateRuleRow
 	err := row.Scan(
 		&i.RuleID,
 		&i.BucketID,

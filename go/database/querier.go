@@ -15,7 +15,7 @@ import (
 type Querier interface {
 	AssignTransactionToBucket(ctx context.Context, transactionID uuid.UUID, bucketID uuid.UUID) error
 	CreateBucket(ctx context.Context, userID uuid.UUID, name string, currencyCode sql.NullString) (FloatBucket, error)
-	CreateRule(ctx context.Context, arg CreateRuleParams) (FloatRule, error)
+	CreateRule(ctx context.Context, arg CreateRuleParams) (CreateRuleRow, error)
 	CreateTransfer(ctx context.Context, arg CreateTransferParams) (FloatBucketTransfer, error)
 	DeleteBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) error
 	DeleteRule(ctx context.Context, ruleID uuid.UUID, userID uuid.UUID) error
@@ -50,7 +50,7 @@ type Querier interface {
 	SetUserToken(ctx context.Context, userID uuid.UUID, upToken sql.NullString) error
 	SetUserWebhookSecret(ctx context.Context, userID uuid.UUID, webhookSecret sql.NullString) error
 	UnregisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error
-	UpdateRule(ctx context.Context, arg UpdateRuleParams) (FloatRule, error)
+	UpdateRule(ctx context.Context, arg UpdateRuleParams) (UpdateRuleRow, error)
 	UpsertFXRate(ctx context.Context, arg UpsertFXRateParams) error
 	UpsertUpTransaction(ctx context.Context, arg UpsertUpTransactionParams) (bool, error)
 	UpsertUser(ctx context.Context, email string) (FloatUser, error)
