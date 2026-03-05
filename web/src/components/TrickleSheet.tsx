@@ -16,7 +16,7 @@ export default function TrickleSheet({ bucketId, trickle, onClose }: Props) {
   const qc = useQueryClient()
 
   const [description, setDescription] = useState(trickle?.description ?? '')
-  const [amountStr, setAmountStr] = useState(trickle ? String(trickle.amount_cents / 100) : '')
+  const [amountStr, setAmountStr] = useState(trickle ? trickle.display_amount : '')
   const [period, setPeriod] = useState<string>(trickle?.period ?? 'monthly')
   const [startDate, setStartDate] = useState(tomorrow)
   const [endDate, setEndDate] = useState(trickle?.end_date ? trickle.end_date.slice(0, 10) : '')

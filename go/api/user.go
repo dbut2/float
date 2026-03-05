@@ -8,6 +8,7 @@ import (
 
 	"dbut.dev/float/go/middleware"
 	"dbut.dev/float/go/service"
+	"dbut.dev/float/go/utils"
 )
 
 func (a *API) getUser(c *gin.Context) {
@@ -58,7 +59,10 @@ func (a *API) getTransactBalance(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"balance_cents": balance})
+	c.JSON(http.StatusOK, gin.H{
+		"balance_cents":   balance,
+		"balance_display": utils.FormatAmount(balance, "AUD"),
+	})
 }
 
 func (a *API) postUserSync(c *gin.Context) {

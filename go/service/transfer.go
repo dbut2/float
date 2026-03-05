@@ -16,6 +16,7 @@ type Transfer struct {
 	ToBucketID     uuid.UUID `json:"to_bucket_id"`
 	ToBucketName   string    `json:"to_bucket_name"`
 	AmountCents    int64     `json:"amount_cents"`
+	DisplayAmount  string    `json:"display_amount"`
 	Note           string    `json:"note"`
 	CreatedAt      time.Time `json:"created_at"`
 }
@@ -42,6 +43,7 @@ func (s *TransferService) ListTransfers(ctx context.Context, userID uuid.UUID) (
 			ToBucketID:     r.ToBucketID,
 			ToBucketName:   r.ToBucketName,
 			AmountCents:    r.AmountCents,
+			DisplayAmount:  FormatCurrencyAmount(r.AmountCents, "AUD"),
 			Note:           r.Note,
 			CreatedAt:      r.CreatedAt,
 		}
@@ -60,12 +62,13 @@ func (s *TransferService) CreateTransfer(ctx context.Context, transfer Transfer)
 		return Transfer{}, err
 	}
 	return Transfer{
-		TransferID:  t.TransferID,
-		FromBucketID: t.FromBucketID,
-		ToBucketID:  t.ToBucketID,
-		AmountCents: t.AmountCents,
-		Note:        t.Note,
-		CreatedAt:   t.CreatedAt,
+		TransferID:    t.TransferID,
+		FromBucketID:  t.FromBucketID,
+		ToBucketID:    t.ToBucketID,
+		AmountCents:   t.AmountCents,
+		DisplayAmount: FormatCurrencyAmount(t.AmountCents, "AUD"),
+		Note:          t.Note,
+		CreatedAt:     t.CreatedAt,
 	}, nil
 }
 

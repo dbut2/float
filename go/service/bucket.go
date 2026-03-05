@@ -10,24 +10,30 @@ import (
 	"github.com/google/uuid"
 
 	"dbut.dev/float/go/database"
+	"dbut.dev/float/go/utils"
 )
 
 type Bucket struct {
-	BucketID     uuid.UUID `json:"bucket_id"`
-	UserID       uuid.UUID `json:"user_id"`
-	Name         string    `json:"name"`
-	IsGeneral    bool      `json:"is_general"`
-	CreatedAt    time.Time `json:"created_at"`
-	BalanceCents int64     `json:"balance_cents"`
-	DisplayOrder *int      `json:"display_order,omitempty"`
+	BucketID              uuid.UUID `json:"bucket_id"`
+	UserID                uuid.UUID `json:"user_id"`
+	Name                  string    `json:"name"`
+	IsGeneral             bool      `json:"is_general"`
+	CreatedAt             time.Time `json:"created_at"`
+	BalanceCents          int64     `json:"balance_cents"`
+	BalanceDisplay        string    `json:"balance_display"`
+	DisplayOrder          *int      `json:"display_order,omitempty"`
+	CurrencyCode          *string   `json:"currency_code,omitempty"`
+	FXRate                *float64  `json:"fx_rate,omitempty"`
+	ForeignBalanceDisplay *string   `json:"foreign_balance_display,omitempty"`
 }
 
 type BucketService struct {
-	q database.Querier
+	q  database.Querier
+	fx *FXService
 }
 
-func NewBucketService(q database.Querier) *BucketService {
-	return &BucketService{q: q}
+func NewBucketService(q database.Querier, fx *FXService) *BucketService {
+	return &BucketService{q: q, fx: fx}
 }
 
 func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bucket, error) {
@@ -42,6 +48,10 @@ func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bu
 			v := int(r.DisplayOrder.Int32)
 			displayOrder = &v
 		}
+		var currencyCode *string
+		if r.CurrencyCode.Valid {
+			currencyCode = &r.CurrencyCode.String
+		}
 		buckets[i] = Bucket{
 			BucketID:     r.BucketID,
 			UserID:       r.UserID,
@@ -50,6 +60,7 @@ func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bu
 			CreatedAt:    r.CreatedAt,
 			BalanceCents: r.BalanceCents,
 			DisplayOrder: displayOrder,
+			CurrencyCode: currencyCode,
 		}
 	}
 
@@ -70,21 +81,41 @@ func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bu
 		}
 	}
 
+	for i := range buckets {
+		if buckets[i].CurrencyCode != nil && s.fx != nil {
+			if rate, err := s.fx.GetRate(ctx, "AUD", *buckets[i].CurrencyCode); err == nil {
+				buckets[i].FXRate = &rate
+				display := utils.FormatForeignBalance(buckets[i].BalanceCents, rate, *buckets[i].CurrencyCode)
+				buckets[i].ForeignBalanceDisplay = &display
+			}
+		}
+		buckets[i].setDisplays()
+	}
+
 	return buckets, nil
 }
 
 func (s *BucketService) CreateBucket(ctx context.Context, bucket Bucket) (Bucket, error) {
-	b, err := s.q.CreateBucket(ctx, bucket.UserID, bucket.Name)
+	var currencyCode sql.NullString
+	if bucket.CurrencyCode != nil {
+		currencyCode = sql.NullString{String: *bucket.CurrencyCode, Valid: true}
+	}
+	b, err := s.q.CreateBucket(ctx, bucket.UserID, bucket.Name, currencyCode)
 	if err != nil {
 		return Bucket{}, err
 	}
-	return Bucket{
+	result := Bucket{
 		BucketID:  b.BucketID,
 		UserID:    b.UserID,
 		Name:      b.Name,
 		IsGeneral: b.IsGeneral,
 		CreatedAt: b.CreatedAt,
-	}, nil
+	}
+	if b.CurrencyCode.Valid {
+		result.CurrencyCode = &b.CurrencyCode.String
+	}
+	result.setDisplays()
+	return result, nil
 }
 
 func (s *BucketService) GetBucket(ctx context.Context, bucketID, userID uuid.UUID) (Bucket, error) {
@@ -103,6 +134,9 @@ func (s *BucketService) GetBucket(ctx context.Context, bucketID, userID uuid.UUI
 		CreatedAt:    b.CreatedAt,
 		BalanceCents: b.BalanceCents,
 	}
+	if b.CurrencyCode.Valid {
+		bucket.CurrencyCode = &b.CurrencyCode.String
+	}
 
 	now := time.Now()
 	if bucket.IsGeneral {
@@ -116,6 +150,15 @@ func (s *BucketService) GetBucket(ctx context.Context, bucketID, userID uuid.UUI
 			bucket.BalanceCents += trickleAmount(dbTrickleToService(r.TrickleID, r.FromBucketID, r.FromBucketName, r.ToBucketID, r.ToBucketName, r.AmountCents, r.Description, r.Period, r.StartDate, r.EndDate, r.CreatedAt), now)
 		}
 	}
+
+	if bucket.CurrencyCode != nil && s.fx != nil {
+		if rate, err := s.fx.GetRate(ctx, "AUD", *bucket.CurrencyCode); err == nil {
+			bucket.FXRate = &rate
+			display := utils.FormatForeignBalance(bucket.BalanceCents, rate, *bucket.CurrencyCode)
+			bucket.ForeignBalanceDisplay = &display
+		}
+	}
+	bucket.setDisplays()
 
 	return bucket, nil
 }
@@ -136,7 +179,11 @@ func (s *BucketService) ReorderBuckets(ctx context.Context, userID uuid.UUID, bu
 	return nil
 }
 
-func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID) ([]Transaction, error) {
+func (b *Bucket) setDisplays() {
+	b.BalanceDisplay = utils.FormatAmount(b.BalanceCents, "AUD")
+}
+
+func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID, userID uuid.UUID) ([]Transaction, error) {
 	rows, err := s.q.ListBucketTransactions(ctx, bucketID)
 	if err != nil {
 		return nil, err
@@ -154,18 +201,22 @@ func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID uui
 			createdAt = now
 		}
 		if t.ToBucketID == bucketID {
+			amt := trickleAmount(t, now)
 			txns = append(txns, Transaction{
-				BucketID:    bucketID,
-				Description: "Trickle from " + t.FromBucketName,
-				AmountCents: trickleAmount(t, now),
-				CreatedAt:   createdAt,
+				BucketID:      bucketID,
+				Description:   "Trickle from " + t.FromBucketName,
+				AmountCents:   amt,
+				DisplayAmount: utils.FormatSignedAmount(amt, "AUD"),
+				CreatedAt:     createdAt,
 			})
 		} else if t.FromBucketID == bucketID {
+			amt := -trickleAmount(t, now)
 			txns = append(txns, Transaction{
-				BucketID:    bucketID,
-				Description: "Trickle to " + t.ToBucketName,
-				AmountCents: -trickleAmount(t, now),
-				CreatedAt:   createdAt,
+				BucketID:      bucketID,
+				Description:   "Trickle to " + t.ToBucketName,
+				AmountCents:   amt,
+				DisplayAmount: utils.FormatSignedAmount(amt, "AUD"),
+				CreatedAt:     createdAt,
 			})
 		}
 	}
@@ -173,6 +224,25 @@ func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID uui
 	sort.Slice(txns, func(i, j int) bool {
 		return txns[i].CreatedAt.After(txns[j].CreatedAt)
 	})
+
+	// For travel buckets, enrich every transaction with a foreign display amount.
+	// Transactions already settled in the bucket's currency keep their exact rate;
+	// everything else (AUD transfers, trickles, etc.) is converted at today's rate.
+	if b, err := s.q.GetBucket(ctx, bucketID, userID); err == nil && b.CurrencyCode.Valid && s.fx != nil {
+		currencyCode := b.CurrencyCode.String
+		if rate, err := s.fx.GetRate(ctx, "AUD", currencyCode); err == nil {
+			for i := range txns {
+				tx := &txns[i]
+				if tx.ForeignCurrencyCode != nil && *tx.ForeignCurrencyCode == currencyCode {
+					// Already has an accurate settled foreign amount — keep it.
+					continue
+				}
+				display := utils.FormatForeignBalance(tx.AmountCents, rate, currencyCode)
+				tx.ForeignCurrencyCode = &currencyCode
+				tx.ForeignDisplayAmount = &display
+			}
+		}
+	}
 
 	return txns, nil
 }

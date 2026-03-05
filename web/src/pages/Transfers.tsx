@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeftRight, Plus, Trash2 } from 'lucide-react'
-import { api, formatAUD, formatDate } from '../lib/api'
+import { api, formatDate } from '../lib/api'
 import TransferSheet from '../components/TransferSheet'
 
 export default function Transfers() {
@@ -88,7 +88,7 @@ export default function Transfers() {
                 <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{formatDate(t.created_at)}</p>
               </div>
               <p className="amount-neutral" style={{ fontSize: 16, fontWeight: 600, flexShrink: 0 }}>
-                {formatAUD(t.amount_cents)}
+                {t.display_amount}
               </p>
               <button
                 onClick={() => deleteTransfer.mutate(t.transfer_id)}

@@ -120,7 +120,7 @@ func (s *WebhookService) ProcessEvent(ctx context.Context, userID uuid.UUID, pay
 			return err
 		}
 		if inserted {
-			if _, err := applyRules(ctx, s.q, userID, params.TransactionID, params.Description, params.AmountCents, params.TransactionType, params.CategoryID); err != nil {
+			if _, err := applyRules(ctx, s.q, userID, params.TransactionID, params.Description, params.AmountCents, params.TransactionType, params.CategoryID, params.CreatedAt, params.ForeignCurrencyCode); err != nil {
 				log.Printf("applyRules for tx %s: %v", params.TransactionID, err)
 			}
 		}

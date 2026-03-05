@@ -2,24 +2,39 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, GripVertical, Plus } from 'lucide-react'
-import { type Bucket, api, formatAUD } from '../lib/api'
+import { type Bucket, api } from '../lib/api'
 import { useDraggableSheet } from '../hooks/useDraggableSheet'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 
+const COMMON_CURRENCIES = [
+  { code: 'JPY', name: 'Japanese Yen' },
+  { code: 'CNY', name: 'Chinese Yuan' },
+  { code: 'USD', name: 'US Dollar' },
+  { code: 'EUR', name: 'Euro' },
+  { code: 'GBP', name: 'British Pound' },
+  { code: 'THB', name: 'Thai Baht' },
+  { code: 'IDR', name: 'Indonesian Rupiah' },
+  { code: 'SGD', name: 'Singapore Dollar' },
+  { code: 'NZD', name: 'New Zealand Dollar' },
+  { code: 'HKD', name: 'Hong Kong Dollar' },
+  { code: 'KRW', name: 'South Korean Won' },
+  { code: 'VND', name: 'Vietnamese Dong' },
+]
+
 function BucketCard({
-  name,
-  balanceCents,
+  bucket,
   onClick,
   dragHandle,
   isDragging,
 }: {
-  name: string
-  balanceCents: number
+  bucket: Bucket
   onClick: () => void
   dragHandle?: React.ReactNode
   isDragging?: boolean
 }) {
-  const isNeg = balanceCents < 0
+  const isTravel = !!bucket.currency_code && !!bucket.foreign_balance_display
+  const isNeg = bucket.balance_display.startsWith("-")
+
   return (
     <div
       style={{
@@ -53,24 +68,53 @@ function BucketCard({
         }}
       >
         <div>
-          <p
-            style={{
-              fontFamily: 'Syne',
-              fontWeight: 700,
-              fontSize: 13,
-              letterSpacing: '0.04em',
-              color: 'var(--text-2)',
-              marginBottom: 10,
-            }}
-          >
-            {name}
-          </p>
-          <p
-            className={isNeg ? 'amount-negative' : 'amount-neutral'}
-            style={{ fontSize: 28, fontWeight: 600, lineHeight: 1 }}
-          >
-            {isNeg ? '−' : ''}{formatAUD(balanceCents)}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <p
+              style={{
+                fontFamily: 'Syne',
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: '0.04em',
+                color: 'var(--text-2)',
+              }}
+            >
+              {bucket.name}
+            </p>
+            {isTravel && (
+              <span style={{
+                fontFamily: 'Syne',
+                fontWeight: 700,
+                fontSize: 10,
+                letterSpacing: '0.06em',
+                color: 'var(--accent)',
+                background: 'rgba(202,255,51,0.12)',
+                borderRadius: 6,
+                padding: '2px 6px',
+              }}>
+                {bucket.currency_code}
+              </span>
+            )}
+          </div>
+          {isTravel ? (
+            <>
+              <p
+                className={isNeg ? 'amount-negative' : 'amount-neutral'}
+                style={{ fontSize: 28, fontWeight: 600, lineHeight: 1 }}
+              >
+                {bucket.foreign_balance_display}
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 5 }}>
+                {bucket.balance_display} AUD
+              </p>
+            </>
+          ) : (
+            <p
+              className={isNeg ? 'amount-negative' : 'amount-neutral'}
+              style={{ fontSize: 28, fontWeight: 600, lineHeight: 1 }}
+            >
+              {bucket.balance_display}
+            </p>
+          )}
         </div>
         <ChevronRight size={20} color="var(--text-3)" strokeWidth={1.75} style={{ flexShrink: 0 }} />
       </button>
@@ -83,6 +127,8 @@ export default function Dashboard() {
   const qc = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
+  const [isTravel, setIsTravel] = useState(false)
+  const [newCurrency, setNewCurrency] = useState('JPY')
   const [orderedBuckets, setOrderedBuckets] = useState<Bucket[]>([])
   const dragState = useRef<{ dragIndex: number; startY: number; pointerY: number } | null>(null)
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
@@ -109,16 +155,18 @@ export default function Dashboard() {
   })
 
   const create = useMutation({
-    mutationFn: () => api.createBucket(newName.trim()),
+    mutationFn: () => api.createBucket(newName.trim(), isTravel ? newCurrency : undefined),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['buckets'] })
       setNewName('')
+      setIsTravel(false)
+      setNewCurrency('JPY')
       setShowCreate(false)
     },
   })
 
   const isDesktop = useMediaQuery('(min-width: 768px)')
-  const handleCreateClose = () => { setShowCreate(false); setNewName('') }
+  const handleCreateClose = () => { setShowCreate(false); setNewName(''); setIsTravel(false); setNewCurrency('JPY') }
   const { handleRef: createHandleRef, sheetStyle: createSheetStyle, backdropStyle: createBackdropStyle, onAnimationEnd: createOnAnimationEnd } = useDraggableSheet({ onClose: handleCreateClose, isOpen: showCreate })
 
   function onDragHandlePointerDown(e: React.PointerEvent, index: number) {
@@ -165,7 +213,7 @@ export default function Dashboard() {
         {transactBalance != null && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
             <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', color: 'var(--text-3)', textTransform: 'uppercase' }}>Card</span>
-            <span className="amount-neutral" style={{ fontSize: 15 }}>{formatAUD(transactBalance.balance_cents)}</span>
+            <span className="amount-neutral" style={{ fontSize: 15 }}>{transactBalance.balance_display}</span>
           </div>
         )}
       </div>
@@ -191,8 +239,7 @@ export default function Dashboard() {
             {orderedBuckets.map((bucket, index) => (
               <BucketCard
                 key={bucket.bucket_id}
-                name={bucket.name}
-                balanceCents={bucket.balance_cents}
+                bucket={bucket}
                 onClick={() => navigate(`/buckets/${bucket.bucket_id}`)}
                 isDragging={draggingIndex === index}
                 dragHandle={
@@ -297,9 +344,9 @@ export default function Dashboard() {
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && newName.trim()) create.mutate()
-                if (e.key === 'Escape') { setShowCreate(false); setNewName('') }
+                if (e.key === 'Escape') handleCreateClose()
               }}
-              placeholder="e.g. Groceries, Rent, Travel"
+              placeholder="e.g. Groceries, Rent, Japan Trip"
               style={{
                 width: '100%',
                 background: 'var(--surface-2)',
@@ -313,6 +360,60 @@ export default function Dashboard() {
                 marginBottom: 12,
               }}
             />
+            <button
+              onClick={() => setIsTravel(v => !v)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'var(--surface-2)',
+                border: `1px solid ${isTravel ? 'var(--accent)' : 'var(--border)'}`,
+                borderRadius: 12,
+                padding: '14px 16px',
+                cursor: 'pointer',
+                marginBottom: isTravel ? 8 : 12,
+              }}
+            >
+              <span style={{ fontFamily: 'DM Sans', fontSize: 15, color: 'var(--text)' }}>Travel bucket</span>
+              <div style={{
+                width: 40, height: 22, borderRadius: 11,
+                background: isTravel ? 'var(--accent)' : 'var(--border)',
+                transition: 'background 0.2s',
+                position: 'relative',
+              }}>
+                <div style={{
+                  position: 'absolute', top: 3,
+                  left: isTravel ? 21 : 3,
+                  width: 16, height: 16, borderRadius: '50%',
+                  background: isTravel ? '#000' : 'var(--text-3)',
+                  transition: 'left 0.2s',
+                }} />
+              </div>
+            </button>
+            {isTravel && (
+              <select
+                value={newCurrency}
+                onChange={(e) => setNewCurrency(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--accent)',
+                  borderRadius: 12,
+                  padding: '14px 16px',
+                  color: 'var(--text)',
+                  fontFamily: 'DM Sans',
+                  fontSize: 15,
+                  outline: 'none',
+                  marginBottom: 12,
+                  appearance: 'none',
+                }}
+              >
+                {COMMON_CURRENCIES.map(c => (
+                  <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+                ))}
+              </select>
+            )}
             <button
               onClick={() => create.mutate()}
               disabled={!newName.trim() || create.isPending}

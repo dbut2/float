@@ -11,11 +11,13 @@ export interface Transaction {
   message: string
   amount_cents: number
   display_amount: string
-  currency_code: string
   created_at: string
   is_transaction: boolean
-  transaction_type: string | null
-  raw_json: unknown
+  transaction_type?: string | null
+  raw_json?: unknown
+  foreign_currency_code?: string | null
+  foreign_amount_cents?: number | null
+  foreign_display_amount?: string | null
 }
 
 export interface Bucket {
@@ -25,6 +27,10 @@ export interface Bucket {
   is_general: boolean
   created_at: string
   balance_cents: number
+  balance_display: string
+  currency_code?: string | null
+  fx_rate?: number | null
+  foreign_balance_display?: string | null
 }
 
 export interface Transfer {
@@ -34,6 +40,7 @@ export interface Transfer {
   to_bucket_id: string
   to_bucket_name: string
   amount_cents: number
+  display_amount: string
   note: string
   created_at: string
 }
@@ -45,6 +52,7 @@ export interface Trickle {
   to_bucket_id: string
   to_bucket_name: string
   amount_cents: number
+  display_amount: string
   description: string
   period: 'daily' | 'weekly' | 'fortnightly' | 'monthly'
   start_date: string
@@ -64,6 +72,9 @@ export interface Rule {
   max_amount_cents?: number | null
   transaction_type?: string | null
   category_id?: string | null
+  date_from?: string | null
+  date_to?: string | null
+  foreign_currency_code?: string | null
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -91,10 +102,10 @@ export const api = {
   getBucketTransactions: (id: string) =>
     request<Transaction[]>(`/api/buckets/${id}/transactions`),
 
-  createBucket: (name: string) =>
+  createBucket: (name: string, currencyCode?: string) =>
     request<Bucket>('/api/buckets', {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, currency_code: currencyCode ?? null }),
     }),
 
   deleteBucket: (id: string) =>
@@ -114,7 +125,7 @@ export const api = {
 
   sync: () => request<{ synced: number }>('/api/user/sync', { method: 'POST' }),
 
-  getTransactBalance: () => request<{ balance_cents: number }>('/api/user/balance'),
+  getTransactBalance: () => request<{ balance_cents: number; balance_display: string }>('/api/user/balance'),
 
   getTransfers: () => request<Transfer[]>('/api/transfers'),
 
@@ -159,6 +170,9 @@ export const api = {
     max_amount_aud?: number | null
     transaction_type?: string | null
     category_id?: string | null
+    date_from?: string | null
+    date_to?: string | null
+    foreign_currency_code?: string | null
   }) =>
     request<Rule>(`/api/buckets/${bucketId}/rules`, {
       method: 'POST',
@@ -173,6 +187,9 @@ export const api = {
     max_amount_aud?: number | null
     transaction_type?: string | null
     category_id?: string | null
+    date_from?: string | null
+    date_to?: string | null
+    foreign_currency_code?: string | null
   }) =>
     request<Rule>(`/api/rules/${ruleId}`, {
       method: 'PUT',
@@ -186,15 +203,6 @@ export const api = {
     request<{ applied: number }>('/api/rules/apply', { method: 'POST' }),
 }
 
-export function formatAUD(cents: number): string {
-  const abs = Math.abs(cents) / 100
-  return new Intl.NumberFormat('en-AU', {
-    style: 'currency',
-    currency: 'AUD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(abs)
-}
 
 export function formatDate(dateStr: string): string {
   const d = new Date(dateStr)

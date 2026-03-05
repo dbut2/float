@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -50,15 +51,7 @@ func (a *API) createRule(c *gin.Context) {
 		return
 	}
 
-	var body struct {
-		Name                string   `json:"name"`
-		Priority            int32    `json:"priority"`
-		DescriptionContains *string  `json:"description_contains"`
-		MinAmountAUD        *float64 `json:"min_amount_aud"`
-		MaxAmountAUD        *float64 `json:"max_amount_aud"`
-		TransactionType     *string  `json:"transaction_type"`
-		CategoryID          *string  `json:"category_id"`
-	}
+	var body ruleBody
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -68,22 +61,8 @@ func (a *API) createRule(c *gin.Context) {
 		return
 	}
 
-	rule := service.Rule{
-		BucketID:            bucketID,
-		Name:                body.Name,
-		Priority:            body.Priority,
-		DescriptionContains: body.DescriptionContains,
-		TransactionType:     body.TransactionType,
-		CategoryID:          body.CategoryID,
-	}
-	if body.MinAmountAUD != nil {
-		v := int64(*body.MinAmountAUD * 100)
-		rule.MinAmountCents = &v
-	}
-	if body.MaxAmountAUD != nil {
-		v := int64(*body.MaxAmountAUD * 100)
-		rule.MaxAmountCents = &v
-	}
+	rule := ruleFromBody(body)
+	rule.BucketID = bucketID
 
 	created, err := a.rules.CreateRule(c.Request.Context(), rule)
 	if err != nil {
@@ -104,15 +83,7 @@ func (a *API) updateRule(c *gin.Context) {
 		return
 	}
 
-	var body struct {
-		Name                string   `json:"name"`
-		Priority            int32    `json:"priority"`
-		DescriptionContains *string  `json:"description_contains"`
-		MinAmountAUD        *float64 `json:"min_amount_aud"`
-		MaxAmountAUD        *float64 `json:"max_amount_aud"`
-		TransactionType     *string  `json:"transaction_type"`
-		CategoryID          *string  `json:"category_id"`
-	}
+	var body ruleBody
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -122,22 +93,8 @@ func (a *API) updateRule(c *gin.Context) {
 		return
 	}
 
-	rule := service.Rule{
-		RuleID:              ruleID,
-		Name:                body.Name,
-		Priority:            body.Priority,
-		DescriptionContains: body.DescriptionContains,
-		TransactionType:     body.TransactionType,
-		CategoryID:          body.CategoryID,
-	}
-	if body.MinAmountAUD != nil {
-		v := int64(*body.MinAmountAUD * 100)
-		rule.MinAmountCents = &v
-	}
-	if body.MaxAmountAUD != nil {
-		v := int64(*body.MaxAmountAUD * 100)
-		rule.MaxAmountCents = &v
-	}
+	rule := ruleFromBody(body)
+	rule.RuleID = ruleID
 
 	updated, err := a.rules.UpdateRule(c.Request.Context(), rule, userID)
 	if err != nil {
@@ -167,6 +124,49 @@ func (a *API) deleteRule(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+type ruleBody struct {
+	Name                string   `json:"name"`
+	Priority            int32    `json:"priority"`
+	DescriptionContains *string  `json:"description_contains"`
+	MinAmountAUD        *float64 `json:"min_amount_aud"`
+	MaxAmountAUD        *float64 `json:"max_amount_aud"`
+	TransactionType     *string  `json:"transaction_type"`
+	CategoryID          *string  `json:"category_id"`
+	DateFrom            *string  `json:"date_from"`
+	DateTo              *string  `json:"date_to"`
+	ForeignCurrencyCode *string  `json:"foreign_currency_code"`
+}
+
+func ruleFromBody(body ruleBody) service.Rule {
+	rule := service.Rule{
+		Name:                body.Name,
+		Priority:            body.Priority,
+		DescriptionContains: body.DescriptionContains,
+		TransactionType:     body.TransactionType,
+		CategoryID:          body.CategoryID,
+		ForeignCurrencyCode: body.ForeignCurrencyCode,
+	}
+	if body.MinAmountAUD != nil {
+		v := int64(*body.MinAmountAUD * 100)
+		rule.MinAmountCents = &v
+	}
+	if body.MaxAmountAUD != nil {
+		v := int64(*body.MaxAmountAUD * 100)
+		rule.MaxAmountCents = &v
+	}
+	if body.DateFrom != nil {
+		if t, err := time.Parse("2006-01-02", *body.DateFrom); err == nil {
+			rule.DateFrom = &t
+		}
+	}
+	if body.DateTo != nil {
+		if t, err := time.Parse("2006-01-02", *body.DateTo); err == nil {
+			rule.DateTo = &t
+		}
+	}
+	return rule
 }
 
 func (a *API) applyRulesToGeneral(c *gin.Context) {

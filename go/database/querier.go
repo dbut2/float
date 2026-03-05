@@ -7,13 +7,14 @@ package database
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 type Querier interface {
 	AssignTransactionToBucket(ctx context.Context, transactionID uuid.UUID, bucketID uuid.UUID) error
-	CreateBucket(ctx context.Context, userID uuid.UUID, name string) (FloatBucket, error)
+	CreateBucket(ctx context.Context, userID uuid.UUID, name string, currencyCode sql.NullString) (FloatBucket, error)
 	CreateRule(ctx context.Context, arg CreateRuleParams) (FloatRule, error)
 	CreateTransfer(ctx context.Context, arg CreateTransferParams) (FloatBucketTransfer, error)
 	DeleteBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) error
@@ -24,6 +25,7 @@ type Querier interface {
 	EnsureGeneralBucket(ctx context.Context, userID uuid.UUID) error
 	GetActiveTrickleByToBucketID(ctx context.Context, toBucketID uuid.UUID, userID uuid.UUID) (GetActiveTrickleByToBucketIDRow, error)
 	GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (GetBucketRow, error)
+	GetFXRate(ctx context.Context, baseCurrency string, quoteCurrency string, column3 time.Time) (float64, error)
 	GetGeneralBucket(ctx context.Context, userID uuid.UUID) (FloatBucket, error)
 	GetTransaction(ctx context.Context, transactionID uuid.UUID, userID uuid.UUID) (FloatBucketLedger, error)
 	GetTricklesByBucketID(ctx context.Context, toBucketID uuid.UUID) ([]GetTricklesByBucketIDRow, error)
@@ -40,7 +42,7 @@ type Querier interface {
 	ListTransactions(ctx context.Context, userID uuid.UUID) ([]FloatBucketLedger, error)
 	ListTransfers(ctx context.Context, userID uuid.UUID) ([]ListTransfersRow, error)
 	ListTrickles(ctx context.Context, userID uuid.UUID) ([]ListTricklesRow, error)
-	ListUpTransactionsByBucketID(ctx context.Context, bucketID uuid.UUID) ([]FloatUpTransaction, error)
+	ListUpTransactionsByBucketID(ctx context.Context, bucketID uuid.UUID) ([]ListUpTransactionsByBucketIDRow, error)
 	ReassignBucketTransactionsToGeneral(ctx context.Context, bucketID uuid.UUID) error
 	RegisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error
 	SetBucketDisplayOrder(ctx context.Context, bucketID uuid.UUID, displayOrder sql.NullInt32, userID uuid.UUID) error
@@ -49,6 +51,7 @@ type Querier interface {
 	SetUserWebhookSecret(ctx context.Context, userID uuid.UUID, webhookSecret sql.NullString) error
 	UnregisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error
 	UpdateRule(ctx context.Context, arg UpdateRuleParams) (FloatRule, error)
+	UpsertFXRate(ctx context.Context, arg UpsertFXRateParams) error
 	UpsertUpTransaction(ctx context.Context, arg UpsertUpTransactionParams) (bool, error)
 	UpsertUser(ctx context.Context, email string) (FloatUser, error)
 }

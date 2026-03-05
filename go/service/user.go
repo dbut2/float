@@ -104,7 +104,7 @@ func (s *UserService) SyncTransactions(ctx context.Context, userID uuid.UUID) (i
 
 			if inserted {
 				count++
-				if _, err := applyRules(ctx, s.q, userID, params.TransactionID, params.Description, params.AmountCents, params.TransactionType, params.CategoryID); err != nil {
+				if _, err := applyRules(ctx, s.q, userID, params.TransactionID, params.Description, params.AmountCents, params.TransactionType, params.CategoryID, params.CreatedAt, params.ForeignCurrencyCode); err != nil {
 					log.Printf("applyRules for tx %s: %v", params.TransactionID, err)
 				}
 			}
@@ -140,17 +140,24 @@ func upTransactionToParams(userID uuid.UUID, tx up.TransactionResource) (databas
 		return database.UpsertUpTransactionParams{}, err
 	}
 
+	var foreignCurrencyCode sql.NullString
+	var foreignAmountCents sql.NullInt64
+	if fa := tx.Attributes.ForeignAmount; fa != nil {
+		foreignCurrencyCode = sql.NullString{String: fa.CurrencyCode, Valid: true}
+		foreignAmountCents = sql.NullInt64{Int64: int64(fa.ValueInBaseUnits), Valid: true}
+	}
+
 	return database.UpsertUpTransactionParams{
-		TransactionID:   txID,
-		UserID:          userID,
-		Description:     tx.Attributes.Description,
-		Message:         msg,
-		AmountCents:     int64(tx.Attributes.Amount.ValueInBaseUnits),
-		DisplayAmount:   tx.Attributes.Amount.Value,
-		CurrencyCode:    tx.Attributes.Amount.CurrencyCode,
-		CreatedAt:       tx.Attributes.CreatedAt,
-		TransactionType: txType,
-		RawJson:         rawJSON,
-		CategoryID:      categoryID,
+		TransactionID:       txID,
+		UserID:              userID,
+		Description:         tx.Attributes.Description,
+		Message:             msg,
+		AmountCents:         int64(tx.Attributes.Amount.ValueInBaseUnits),
+		CreatedAt:           tx.Attributes.CreatedAt,
+		TransactionType:     txType,
+		RawJson:             rawJSON,
+		CategoryID:          categoryID,
+		ForeignCurrencyCode: foreignCurrencyCode,
+		ForeignAmountCents:  foreignAmountCents,
 	}, nil
 }
