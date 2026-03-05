@@ -180,6 +180,7 @@ func NewDemoService() *DemoService {
 			display := utils.FormatForeignBalance(s.buckets[i].BalanceCents, *s.buckets[i].FXRate, *s.buckets[i].CurrencyCode)
 			s.buckets[i].ForeignBalanceDisplay = &display
 		}
+		s.buckets[i].setDisplays()
 	}
 
 	generalBucketID := uuid.UUID{}
