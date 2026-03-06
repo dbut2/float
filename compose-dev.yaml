@@ -1,0 +1,53 @@
+name: float-dev
+
+services:
+  afloat:
+    build: .
+    environment:
+      - DATABASE_DSN=postgres://float:float@db:5432/float?sslmode=disable
+      - BASE_URL=https://afloat.dbut.dev
+    networks:
+      - web
+      - default
+    labels:
+      "traefik.docker.network": "web"
+      "traefik.enable": "true"
+      "traefik.http.routers.afloat.entrypoints": "web"
+      "traefik.http.routers.afloat.rule": "Host(`afloat.dbut.dev`)"
+      "traefik.http.services.afloat.loadbalancer.server.port": "8080"
+    depends_on:
+      db-seed:
+        condition: service_completed_successfully
+
+  db-seed:
+    image: postgres:18
+    environment:
+      PROD_DSN: ${PROD_DSN}
+      LOCAL_DSN: postgres://float:float@db:5432/float?sslmode=disable
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        pg_dump "$$PROD_DSN" --schema=float --no-owner --no-acl > /tmp/prod-dump.sql
+        psql "$$LOCAL_DSN" -c "CREATE SCHEMA IF NOT EXISTS float"
+        psql "$$LOCAL_DSN" < /tmp/prod-dump.sql
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:18
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: float
+      POSTGRES_PASSWORD: float
+      POSTGRES_DB: float
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U float"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
+networks:
+  web:
+    external: true

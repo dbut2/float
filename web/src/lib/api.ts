@@ -111,6 +111,9 @@ export const api = {
   deleteBucket: (id: string) =>
     request<void>(`/api/buckets/${id}`, { method: 'DELETE' }),
 
+  closeBucket: (id: string) =>
+    request<void>(`/api/buckets/${id}/close`, { method: 'POST' }),
+
   assignTransaction: (txId: string, bucketId: string) =>
     request<void>(`/api/transactions/${txId}/bucket`, {
       method: 'PUT',
