@@ -268,6 +268,10 @@ func (s *DemoService) DeleteBucket(_ context.Context, _, _ uuid.UUID) error {
 	return nil
 }
 
+func (s *DemoService) CloseBucket(_ context.Context, _, _ uuid.UUID) error {
+	return nil
+}
+
 func (s *DemoService) ListBucketTransactions(_ context.Context, bucketID, _ uuid.UUID) ([]Transaction, error) {
 	var txs []Transaction
 	for _, t := range s.ledger {

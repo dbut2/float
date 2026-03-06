@@ -19,6 +19,7 @@ FROM float.bucket_trickles t
 JOIN float.buckets tb ON tb.bucket_id = t.to_bucket_id
 JOIN float.buckets fb ON fb.bucket_id = t.from_bucket_id
 WHERE tb.user_id = $1
+  AND tb.status = 'active'
   AND (t.end_date IS NULL OR t.end_date >= CURRENT_DATE)
 ORDER BY t.created_at DESC;
 

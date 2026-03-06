@@ -23,6 +23,7 @@ type BucketService interface {
 	CreateBucket(ctx context.Context, bucket service.Bucket) (service.Bucket, error)
 	GetBucket(ctx context.Context, bucketID, userID uuid.UUID) (service.Bucket, error)
 	DeleteBucket(ctx context.Context, bucketID, userID uuid.UUID) error
+	CloseBucket(ctx context.Context, bucketID, userID uuid.UUID) error
 	ListBucketTransactions(ctx context.Context, bucketID, userID uuid.UUID) ([]service.Transaction, error)
 	ReorderBuckets(ctx context.Context, userID uuid.UUID, bucketIDs []uuid.UUID) error
 }
@@ -107,6 +108,7 @@ func (a *API) Register(r *gin.RouterGroup) {
 	r.PUT("/buckets/order", a.reorderBuckets)
 	r.GET("/buckets/:bucketID", a.getBucket)
 	r.DELETE("/buckets/:bucketID", a.deleteBucket)
+	r.POST("/buckets/:bucketID/close", a.closeBucket)
 	r.GET("/buckets/:bucketID/transactions", a.listBucketTransactions)
 	r.GET("/buckets/:bucketID/rules", a.listBucketRules)
 	r.POST("/buckets/:bucketID/rules", a.createRule)

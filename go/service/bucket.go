@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"sort"
 	"time"
 
@@ -168,6 +169,59 @@ func (s *BucketService) DeleteBucket(ctx context.Context, bucketID, userID uuid.
 		return err
 	}
 	return s.q.DeleteBucket(ctx, bucketID, userID)
+}
+
+func (s *BucketService) CloseBucket(ctx context.Context, bucketID, userID uuid.UUID) error {
+	bucket, err := s.GetBucket(ctx, bucketID, userID)
+	if err != nil {
+		return err
+	}
+	if bucket.IsGeneral {
+		return fmt.Errorf("cannot close General bucket")
+	}
+
+	// End active trickle (reuse DeleteTrickle logic)
+	existing, err := s.q.GetActiveTrickleByToBucketID(ctx, bucketID, userID)
+	if err == nil {
+		today := time.Now().UTC().Truncate(24 * time.Hour)
+		existingStart := existing.StartDate.UTC().Truncate(24 * time.Hour)
+		if existingStart.Before(today) {
+			_ = s.q.SetTrickleEndDate(ctx, existing.TrickleID, sql.NullTime{Time: today, Valid: true}, userID)
+		} else {
+			_, _ = s.q.DeleteTrickle(ctx, existing.TrickleID, userID)
+		}
+	}
+
+	// Recalculate balance including trickle amount
+	balance := bucket.BalanceCents
+	if balance != 0 {
+		general, err := s.q.GetGeneralBucket(ctx, userID)
+		if err != nil {
+			return err
+		}
+		var fromID, toID uuid.UUID
+		var amount int64
+		if balance > 0 {
+			fromID = bucketID
+			toID = general.BucketID
+			amount = balance
+		} else {
+			fromID = general.BucketID
+			toID = bucketID
+			amount = -balance
+		}
+		_, err = s.q.CreateTransfer(ctx, database.CreateTransferParams{
+			FromBucketID: fromID,
+			ToBucketID:   toID,
+			AmountCents:  amount,
+			Note:         "Close bucket: " + bucket.Name,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return s.q.CloseBucket(ctx, bucketID, userID)
 }
 
 func (s *BucketService) ReorderBuckets(ctx context.Context, userID uuid.UUID, bucketIDs []uuid.UUID) error {

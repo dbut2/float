@@ -20,6 +20,7 @@ type FloatBucket struct {
 	CreatedAt    time.Time
 	DisplayOrder sql.NullInt32
 	CurrencyCode sql.NullString
+	Status       string
 }
 
 type FloatBucketLedger struct {

@@ -87,6 +87,27 @@ func (a *API) deleteBucket(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (a *API) closeBucket(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
+	bucketID, err := uuid.Parse(c.Param("bucketID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid bucket ID"})
+		return
+	}
+
+	if err := a.buckets.CloseBucket(c.Request.Context(), bucketID, userID); err != nil {
+		if errors.Is(err, service.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
 func (a *API) reorderBuckets(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 

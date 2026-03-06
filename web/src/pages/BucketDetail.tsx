@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, Filter, Inbox, RotateCw, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, Filter, Inbox, RotateCw, Trash2, X, Archive } from 'lucide-react'
 import { api, formatDate, type Transaction, type Transfer, type Trickle } from '../lib/api'
 import AssignSheet from '../components/AssignSheet'
 import RulesSheet from '../components/RulesSheet'
@@ -70,6 +70,7 @@ export default function BucketDetail() {
   const qc = useQueryClient()
   const [assignTx, setAssignTx] = useState<Transaction | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmClose, setConfirmClose] = useState(false)
   const [showTransfer, setShowTransfer] = useState(false)
   const [showTrickle, setShowTrickle] = useState(false)
   const [showRules, setShowRules] = useState(false)
@@ -137,6 +138,16 @@ export default function BucketDetail() {
     },
   })
 
+  const closeBucketMutation = useMutation({
+    mutationFn: () => api.closeBucket(bucketId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['buckets'] })
+      qc.invalidateQueries({ queryKey: ['trickles'] })
+      qc.invalidateQueries({ queryKey: ['transfers'] })
+      navigate('/', { replace: true })
+    },
+  })
+
   const deleteTrickleMutation = useMutation({
     mutationFn: () => api.deleteTrickle(bucketId),
     onSuccess: () => {
@@ -148,6 +159,8 @@ export default function BucketDetail() {
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const handleDeleteClose = () => setConfirmDelete(false)
   const { handleRef: deleteHandleRef, sheetStyle: deleteSheetStyle, backdropStyle: deleteBackdropStyle, onAnimationEnd: deleteOnAnimationEnd } = useDraggableSheet({ onClose: handleDeleteClose, isOpen: confirmDelete })
+  const handleCloseClose = () => setConfirmClose(false)
+  const { handleRef: closeHandleRef, sheetStyle: closeSheetStyle, backdropStyle: closeBackdropStyle, onAnimationEnd: closeOnAnimationEnd } = useDraggableSheet({ onClose: handleCloseClose, isOpen: confirmClose })
 
   if (!bucket && buckets.length > 0) {
     navigate('/', { replace: true })
@@ -257,6 +270,25 @@ export default function BucketDetail() {
             </button>
             {!bucket?.is_general && (
               <button
+                onClick={() => setConfirmClose(true)}
+                style={{
+                  background: 'rgba(251,191,36,0.1)',
+                  border: 'none',
+                  borderRadius: 10,
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+                title="Close bucket"
+              >
+                <Archive size={16} strokeWidth={1.75} color="var(--yellow, #fbbf24)" />
+              </button>
+            )}
+            {!bucket?.is_general && (
+              <button
                 onClick={() => setConfirmDelete(true)}
                 style={{
                   background: 'rgba(248,113,113,0.1)',
@@ -269,6 +301,7 @@ export default function BucketDetail() {
                   justifyContent: 'center',
                   cursor: 'pointer',
                 }}
+                title="Delete bucket"
               >
                 <Trash2 size={16} strokeWidth={1.75} color="var(--red)" />
               </button>
@@ -657,6 +690,91 @@ export default function BucketDetail() {
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
+              style={{
+                width: '100%',
+                padding: '15px',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-2)',
+                fontFamily: 'DM Sans',
+                fontSize: 15,
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </>,
+        document.body,
+      )}
+
+      {/* Close confirmation sheet */}
+      {confirmClose && createPortal(
+        <>
+          <div
+            onClick={handleCloseClose}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+              zIndex: 100, animation: 'fadeIn 0.2s ease forwards',
+              ...closeBackdropStyle,
+            }}
+          />
+          <div
+            onAnimationEnd={closeOnAnimationEnd}
+            style={isDesktop ? {
+              position: 'fixed', top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 480, zIndex: 101,
+              background: 'var(--surface)', borderRadius: 20,
+              padding: '24px', animation: 'fadeIn 0.2s ease forwards',
+              maxHeight: '85vh', overflowY: 'auto',
+            } : {
+              position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 101,
+              background: 'var(--surface)',
+              borderRadius: '20px 20px 0 0',
+              padding: '20px 20px',
+              paddingBottom: 24,
+              ...closeSheetStyle,
+            }}
+          >
+            {!isDesktop && (
+              <div ref={closeHandleRef} style={{ touchAction: 'none', display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                <div style={{ width: 36, height: 4, background: 'var(--border)', borderRadius: 2 }} />
+              </div>
+            )}
+            <p
+              style={{
+                fontFamily: 'Syne', fontWeight: 800, fontSize: 20,
+                color: 'var(--text)', marginBottom: 8,
+              }}
+            >
+              Close "{bucket?.name}"?
+            </p>
+            <p style={{ fontFamily: 'DM Sans', fontSize: 14, color: 'var(--text-2)', marginBottom: 20 }}>
+              The remaining balance will be moved to General, the trickle will end, and the bucket will be hidden. Transaction history is preserved.
+            </p>
+            <button
+              onClick={() => closeBucketMutation.mutate()}
+              disabled={closeBucketMutation.isPending}
+              className="pressable"
+              style={{
+                width: '100%',
+                padding: '15px',
+                background: 'rgba(251,191,36,0.15)',
+                border: '1px solid rgba(251,191,36,0.3)',
+                borderRadius: 12,
+                color: 'var(--yellow, #fbbf24)',
+                fontFamily: 'Syne',
+                fontWeight: 700,
+                fontSize: 15,
+                cursor: 'pointer',
+                marginBottom: 10,
+              }}
+            >
+              {closeBucketMutation.isPending ? 'Closing…' : 'Close Bucket'}
+            </button>
+            <button
+              onClick={() => setConfirmClose(false)}
               style={{
                 width: '100%',
                 padding: '15px',
