@@ -1,6 +1,0 @@
-package: mastercard
-generate:
-  models: true
-  client: true
-  server-urls: true
-output: client.gen.go

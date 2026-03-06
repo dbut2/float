@@ -8,15 +8,15 @@ import (
 	"time"
 
 	"dbut.dev/float/go/database"
-	"dbut.dev/float/go/mastercard"
+	"dbut.dev/float/go/frankfurter"
 )
 
 type FXService struct {
 	q      database.Querier
-	client *mastercard.FXClient
+	client *frankfurter.FXClient
 }
 
-func NewFXService(q database.Querier, client *mastercard.FXClient) *FXService {
+func NewFXService(q database.Querier, client *frankfurter.FXClient) *FXService {
 	return &FXService{q: q, client: client}
 }
 
