@@ -24,7 +24,6 @@ RUN go build -o /bin/float ./go/cmd/float
 FROM alpine AS final
 
 COPY --from=backend-builder /bin/float /float
-#COPY float-key-sandbox.p12 /float-key-sandbox.p12
 
 EXPOSE 8080
 

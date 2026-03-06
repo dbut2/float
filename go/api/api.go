@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"dbut.dev/float/go/database"
-	"dbut.dev/float/go/mastercard"
+	"dbut.dev/float/go/frankfurter"
 	"dbut.dev/float/go/service"
 )
 
@@ -69,11 +69,11 @@ type API struct {
 	rules        RuleService
 }
 
-func New(q database.Querier, mc *mastercard.FXClient) *API {
-	fx := service.NewFXService(q, mc)
+func New(q database.Querier, fx *frankfurter.FXClient) *API {
+	fxSvc := service.NewFXService(q, fx)
 	return &API{
 		users:        service.NewUserService(q),
-		buckets:      service.NewBucketService(q, fx),
+		buckets:      service.NewBucketService(q, fxSvc),
 		transactions: service.NewTransactionService(q),
 		transfers:    service.NewTransferService(q),
 		push:         service.NewPushService(q),
