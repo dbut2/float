@@ -24,6 +24,7 @@ export interface Bucket {
   bucket_id: string
   user_id: string
   name: string
+  description: string
   is_general: boolean
   created_at: string
   balance_cents: number
@@ -60,23 +61,6 @@ export interface Trickle {
   created_at: string
 }
 
-export interface Rule {
-  rule_id: string
-  bucket_id: string
-  bucket_name: string
-  name: string
-  priority: number
-  created_at: string
-  description_contains?: string | null
-  min_amount_cents?: number | null
-  max_amount_cents?: number | null
-  transaction_type?: string | null
-  category_id?: string | null
-  date_from?: string | null
-  date_to?: string | null
-  foreign_currency_code?: string | null
-}
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { 'Content-Type': 'application/json', ...init?.headers },
@@ -102,10 +86,10 @@ export const api = {
   getBucketTransactions: (id: string) =>
     request<Transaction[]>(`/api/buckets/${id}/transactions`),
 
-  createBucket: (name: string, currencyCode?: string) =>
+  createBucket: (name: string, currencyCode?: string, description?: string) =>
     request<Bucket>('/api/buckets', {
       method: 'POST',
-      body: JSON.stringify({ name, currency_code: currencyCode ?? null }),
+      body: JSON.stringify({ name, currency_code: currencyCode ?? null, description: description ?? '' }),
     }),
 
   deleteBucket: (id: string) =>
@@ -160,50 +144,17 @@ export const api = {
       body: JSON.stringify({ bucket_ids: bucketIds }),
     }),
 
-  getRules: () => request<Rule[]>('/api/rules'),
-
-  getBucketRules: (bucketId: string) =>
-    request<Rule[]>(`/api/buckets/${bucketId}/rules`),
-
-  createRule: (bucketId: string, data: {
-    name: string
-    priority?: number
-    description_contains?: string | null
-    min_amount_aud?: number | null
-    max_amount_aud?: number | null
-    transaction_type?: string | null
-    category_id?: string | null
-    date_from?: string | null
-    date_to?: string | null
-    foreign_currency_code?: string | null
-  }) =>
-    request<Rule>(`/api/buckets/${bucketId}/rules`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
-  updateRule: (ruleId: string, data: {
-    name: string
-    priority?: number
-    description_contains?: string | null
-    min_amount_aud?: number | null
-    max_amount_aud?: number | null
-    transaction_type?: string | null
-    category_id?: string | null
-    date_from?: string | null
-    date_to?: string | null
-    foreign_currency_code?: string | null
-  }) =>
-    request<Rule>(`/api/rules/${ruleId}`, {
+  updateBucketDescription: (bucketId: string, description: string) =>
+    request<void>(`/api/buckets/${bucketId}/description`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ description }),
     }),
 
-  deleteRule: (ruleId: string) =>
-    request<void>(`/api/rules/${ruleId}`, { method: 'DELETE' }),
+  reclassify: () =>
+    request<{ status: string }>('/api/classify/reclassify', { method: 'POST' }),
 
-  applyRules: () =>
-    request<{ applied: number }>('/api/rules/apply', { method: 'POST' }),
+  reclassifyStatus: () =>
+    request<{ running: boolean; total: number; processed: number; reclassified: number }>('/api/classify/status'),
 }
 
 

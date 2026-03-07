@@ -21,11 +21,12 @@ type User struct {
 }
 
 type UserService struct {
-	q database.Querier
+	q          database.Querier
+	classifier *ClassifierService
 }
 
-func NewUserService(q database.Querier) *UserService {
-	return &UserService{q: q}
+func NewUserService(q database.Querier, classifier *ClassifierService) *UserService {
+	return &UserService{q: q, classifier: classifier}
 }
 
 func (s *UserService) GetUser(ctx context.Context, userID uuid.UUID) (User, error) {
@@ -104,8 +105,10 @@ func (s *UserService) SyncTransactions(ctx context.Context, userID uuid.UUID) (i
 
 			if inserted {
 				count++
-				if _, err := applyRules(ctx, s.q, userID, params.TransactionID, params.Description, params.AmountCents, params.TransactionType, params.CategoryID, params.CreatedAt, params.ForeignCurrencyCode); err != nil {
-					log.Printf("applyRules for tx %s: %v", params.TransactionID, err)
+				if s.classifier != nil {
+					if err := s.classifier.ClassifyTransaction(ctx, userID, params.TransactionID, params.Description, params.AmountCents, params.TransactionType, params.CategoryID, params.CreatedAt, params.ForeignCurrencyCode); err != nil {
+						log.Printf("classify tx %s: %v", params.TransactionID, err)
+					}
 				}
 			}
 		}

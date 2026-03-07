@@ -21,6 +21,7 @@ type FloatBucket struct {
 	DisplayOrder sql.NullInt32
 	CurrencyCode sql.NullString
 	Status       string
+	Description  string
 }
 
 type FloatBucketLedger struct {
@@ -56,6 +57,16 @@ type FloatBucketTrickle struct {
 	CreatedAt    time.Time
 }
 
+type FloatClassificationLog struct {
+	LogID          uuid.UUID
+	TransactionID  uuid.UUID
+	ChosenBucketID uuid.UUID
+	Confidence     float32
+	Reasoning      string
+	Model          string
+	CreatedAt      time.Time
+}
+
 type FloatFcmToken struct {
 	UserID   uuid.UUID
 	FcmToken string
@@ -66,22 +77,6 @@ type FloatFxRate struct {
 	QuoteCurrency string
 	Rate          float64
 	Date          time.Time
-}
-
-type FloatRule struct {
-	RuleID              uuid.UUID
-	BucketID            uuid.UUID
-	Name                string
-	Priority            int32
-	DescriptionContains sql.NullString
-	MinAmountCents      sql.NullInt64
-	MaxAmountCents      sql.NullInt64
-	TransactionType     sql.NullString
-	CategoryID          sql.NullString
-	CreatedAt           time.Time
-	DateFrom            sql.NullTime
-	DateTo              sql.NullTime
-	ForeignCurrencyCode sql.NullString
 }
 
 type FloatUpTransaction struct {

@@ -1,6 +1,6 @@
 -- name: CreateBucket :one
-INSERT INTO float.buckets (user_id, name, currency_code)
-VALUES ($1, $2, $3)
+INSERT INTO float.buckets (user_id, name, currency_code, description)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: ListBuckets :many
@@ -42,3 +42,13 @@ UPDATE float.buckets SET status = 'closed' WHERE bucket_id = $1 AND user_id = $2
 
 -- name: GetGeneralBucket :one
 SELECT * FROM float.buckets WHERE user_id = $1 AND is_general = TRUE;
+
+-- name: UpdateBucketDescription :exec
+UPDATE float.buckets SET description = $2 WHERE bucket_id = $1 AND user_id = $3;
+
+-- name: ListBucketSampleTransactions :many
+SELECT DISTINCT ON (t.description) t.description, t.amount_cents, t.category_id, t.foreign_currency_code
+FROM float.up_transactions t
+WHERE t.bucket_id = $1
+ORDER BY t.description, t.created_at DESC
+LIMIT 10;

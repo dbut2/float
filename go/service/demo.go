@@ -20,7 +20,6 @@ type demoData struct {
 	Transactions []demoTxData      `json:"transactions"`
 	Transfers    []demoTranserData `json:"transfers"`
 	Trickles     []demoTrickleData `json:"trickles"`
-	Rules        []demoRuleData    `json:"rules"`
 }
 
 type demoBucketData struct {
@@ -62,24 +61,12 @@ type demoTrickleData struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
-type demoRuleData struct {
-	RuleID              uuid.UUID `json:"rule_id"`
-	BucketID            uuid.UUID `json:"bucket_id"`
-	Name                string    `json:"name"`
-	Priority            int32     `json:"priority"`
-	DescriptionContains *string   `json:"description_contains"`
-	MinAmountCents      *int64    `json:"min_amount_cents"`
-	MaxAmountCents      *int64    `json:"max_amount_cents"`
-	CreatedAt           time.Time `json:"created_at"`
-}
-
 type DemoService struct {
 	user      User
 	buckets   []Bucket
 	transfers []Transfer
 	ledger    []Transaction
 	trickles  []Trickle
-	rules     []Rule
 }
 
 func NewDemoService() *DemoService {
@@ -208,20 +195,6 @@ func NewDemoService() *DemoService {
 		})
 	}
 
-	for _, r := range data.Rules {
-		s.rules = append(s.rules, Rule{
-			RuleID:              r.RuleID,
-			BucketID:            r.BucketID,
-			BucketName:          bucketNames[r.BucketID],
-			Name:                r.Name,
-			Priority:            r.Priority,
-			DescriptionContains: r.DescriptionContains,
-			MinAmountCents:      r.MinAmountCents,
-			MaxAmountCents:      r.MaxAmountCents,
-			CreatedAt:           r.CreatedAt,
-		})
-	}
-
 	return s
 }
 
@@ -339,34 +312,18 @@ func (s *DemoService) ReorderBuckets(_ context.Context, _ uuid.UUID, _ []uuid.UU
 	return nil
 }
 
-func (s *DemoService) ListRules(_ context.Context, _ uuid.UUID) ([]Rule, error) {
-	return s.rules, nil
-}
-
-func (s *DemoService) ListRulesByBucket(_ context.Context, bucketID, _ uuid.UUID) ([]Rule, error) {
-	var rules []Rule
-	for _, r := range s.rules {
-		if r.BucketID == bucketID {
-			rules = append(rules, r)
-		}
-	}
-	return rules, nil
-}
-
-func (s *DemoService) CreateRule(_ context.Context, rule Rule) (Rule, error) {
-	rule.RuleID = uuid.New()
-	rule.CreatedAt = time.Now()
-	return rule, nil
-}
-
-func (s *DemoService) UpdateRule(_ context.Context, rule Rule, _ uuid.UUID) (Rule, error) {
-	return rule, nil
-}
-
-func (s *DemoService) DeleteRule(_ context.Context, _, _ uuid.UUID) error {
+func (s *DemoService) UpdateBucketDescription(_ context.Context, _, _ uuid.UUID, _ string) error {
 	return nil
 }
 
-func (s *DemoService) ApplyRulesToGeneral(_ context.Context, _ uuid.UUID) (int, error) {
-	return 0, nil
+func (s *DemoService) ClassifyOne(_ context.Context, _, _ uuid.UUID) error {
+	return nil
+}
+
+func (s *DemoService) StartReclassifyGeneral(_ uuid.UUID) bool {
+	return true
+}
+
+func (s *DemoService) GetReclassifyStatus(_ uuid.UUID) ReclassifyStatus {
+	return ReclassifyStatus{}
 }

@@ -14,6 +14,7 @@ import (
 	"dbut.dev/float/go/database"
 	"dbut.dev/float/go/frankfurter"
 	"dbut.dev/float/go/middleware"
+	"dbut.dev/float/go/service"
 	"dbut.dev/float/go/static"
 	"dbut.dev/float/go/webhook"
 )
@@ -53,9 +54,17 @@ func setup(r *gin.Engine) (*api.API, gin.HandlerFunc) {
 
 	fx := frankfurter.NewFXClient()
 
-	webhook.New(queries).Register(r.Group("/webhook"))
+	var classifier *service.ClassifierService
+	if ollamaURL := os.Getenv("OLLAMA_URL"); ollamaURL != "" {
+		ollamaClient := service.NewOllamaClient(ollamaURL, "qwen3.5:9b")
+		classifier = service.NewClassifierService(queries, ollamaClient)
+	} else {
+		log.Println("OLLAMA_URL not set, classification disabled")
+	}
 
-	return api.New(queries, fx), middleware.Middleware(queries, os.Getenv("BASE_URL"))
+	webhook.New(queries, classifier).Register(r.Group("/webhook"))
+
+	return api.New(queries, fx, classifier), middleware.Middleware(queries, os.Getenv("BASE_URL"))
 }
 
 func runMigrations(db *sql.DB) {

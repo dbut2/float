@@ -18,6 +18,7 @@ type Bucket struct {
 	BucketID              uuid.UUID `json:"bucket_id"`
 	UserID                uuid.UUID `json:"user_id"`
 	Name                  string    `json:"name"`
+	Description           string    `json:"description"`
 	IsGeneral             bool      `json:"is_general"`
 	CreatedAt             time.Time `json:"created_at"`
 	BalanceCents          int64     `json:"balance_cents"`
@@ -57,6 +58,7 @@ func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bu
 			BucketID:     r.BucketID,
 			UserID:       r.UserID,
 			Name:         r.Name,
+			Description:  r.Description,
 			IsGeneral:    r.IsGeneral,
 			CreatedAt:    r.CreatedAt,
 			BalanceCents: r.BalanceCents,
@@ -101,7 +103,12 @@ func (s *BucketService) CreateBucket(ctx context.Context, bucket Bucket) (Bucket
 	if bucket.CurrencyCode != nil {
 		currencyCode = sql.NullString{String: *bucket.CurrencyCode, Valid: true}
 	}
-	b, err := s.q.CreateBucket(ctx, bucket.UserID, bucket.Name, currencyCode)
+	b, err := s.q.CreateBucket(ctx, database.CreateBucketParams{
+		UserID:       bucket.UserID,
+		Name:         bucket.Name,
+		CurrencyCode: currencyCode,
+		Description:  bucket.Description,
+	})
 	if err != nil {
 		return Bucket{}, err
 	}
@@ -131,6 +138,7 @@ func (s *BucketService) GetBucket(ctx context.Context, bucketID, userID uuid.UUI
 		BucketID:     b.BucketID,
 		UserID:       b.UserID,
 		Name:         b.Name,
+		Description:  b.Description,
 		IsGeneral:    b.IsGeneral,
 		CreatedAt:    b.CreatedAt,
 		BalanceCents: b.BalanceCents,
@@ -231,6 +239,10 @@ func (s *BucketService) ReorderBuckets(ctx context.Context, userID uuid.UUID, bu
 		}
 	}
 	return nil
+}
+
+func (s *BucketService) UpdateBucketDescription(ctx context.Context, bucketID, userID uuid.UUID, description string) error {
+	return s.q.UpdateBucketDescription(ctx, bucketID, description, userID)
 }
 
 func (b *Bucket) setDisplays() {
