@@ -1,10 +1,10 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
-import { House, Filter, Settings2 } from 'lucide-react'
+import { House, Sparkles, Settings2 } from 'lucide-react'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 
 const navItems = [
   { to: '/', label: 'Home', Icon: House, exact: true },
-  { to: '/rules', label: 'Rules', Icon: Filter, exact: true },
+  { to: '/rules', label: 'Classify', Icon: Sparkles, exact: true },
   { to: '/settings', label: 'Settings', Icon: Settings2, exact: false },
 ]
 

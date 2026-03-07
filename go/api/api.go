@@ -26,6 +26,7 @@ type BucketService interface {
 	CloseBucket(ctx context.Context, bucketID, userID uuid.UUID) error
 	ListBucketTransactions(ctx context.Context, bucketID, userID uuid.UUID) ([]service.Transaction, error)
 	ReorderBuckets(ctx context.Context, userID uuid.UUID, bucketIDs []uuid.UUID) error
+	UpdateBucketDescription(ctx context.Context, bucketID, userID uuid.UUID, description string) error
 }
 
 type TransactionService interface {
@@ -51,13 +52,10 @@ type TrickleService interface {
 	DeleteTrickle(ctx context.Context, toBucketID, userID uuid.UUID) error
 }
 
-type RuleService interface {
-	ListRules(ctx context.Context, userID uuid.UUID) ([]service.Rule, error)
-	ListRulesByBucket(ctx context.Context, bucketID, userID uuid.UUID) ([]service.Rule, error)
-	CreateRule(ctx context.Context, rule service.Rule) (service.Rule, error)
-	UpdateRule(ctx context.Context, rule service.Rule, userID uuid.UUID) (service.Rule, error)
-	DeleteRule(ctx context.Context, ruleID, userID uuid.UUID) error
-	ApplyRulesToGeneral(ctx context.Context, userID uuid.UUID) (int, error)
+type ClassifierServiceInterface interface {
+	ClassifyOne(ctx context.Context, userID, txID uuid.UUID) error
+	StartReclassifyGeneral(userID uuid.UUID) bool
+	GetReclassifyStatus(userID uuid.UUID) service.ReclassifyStatus
 }
 
 type API struct {
@@ -67,19 +65,19 @@ type API struct {
 	transfers    TransferService
 	push         PushService
 	trickles     TrickleService
-	rules        RuleService
+	classifier   ClassifierServiceInterface
 }
 
-func New(q database.Querier, fx *frankfurter.FXClient) *API {
+func New(q database.Querier, fx *frankfurter.FXClient, classifier *service.ClassifierService) *API {
 	fxSvc := service.NewFXService(q, fx)
 	return &API{
-		users:        service.NewUserService(q),
+		users:        service.NewUserService(q, classifier),
 		buckets:      service.NewBucketService(q, fxSvc),
 		transactions: service.NewTransactionService(q),
 		transfers:    service.NewTransferService(q),
 		push:         service.NewPushService(q),
 		trickles:     service.NewTrickleService(q),
-		rules:        service.NewRuleService(q),
+		classifier:   classifier,
 	}
 }
 
@@ -93,7 +91,7 @@ func NewDemo() (*API, uuid.UUID) {
 		transfers:    demoService,
 		push:         demoService,
 		trickles:     demoService,
-		rules:        demoService,
+		classifier:   demoService,
 	}, demoService.UserID()
 }
 
@@ -110,8 +108,7 @@ func (a *API) Register(r *gin.RouterGroup) {
 	r.DELETE("/buckets/:bucketID", a.deleteBucket)
 	r.POST("/buckets/:bucketID/close", a.closeBucket)
 	r.GET("/buckets/:bucketID/transactions", a.listBucketTransactions)
-	r.GET("/buckets/:bucketID/rules", a.listBucketRules)
-	r.POST("/buckets/:bucketID/rules", a.createRule)
+	r.PUT("/buckets/:bucketID/description", a.updateBucketDescription)
 
 	r.GET("/transactions", a.listTransactions)
 	r.PUT("/transactions/:transactionID/bucket", a.assignTransactionToBucket)
@@ -125,10 +122,9 @@ func (a *API) Register(r *gin.RouterGroup) {
 	r.PUT("/buckets/:bucketID/trickle", a.upsertTrickle)
 	r.DELETE("/buckets/:bucketID/trickle", a.deleteTrickle)
 
-	r.GET("/rules", a.listRules)
-	r.PUT("/rules/:ruleID", a.updateRule)
-	r.DELETE("/rules/:ruleID", a.deleteRule)
-	r.POST("/rules/apply", a.applyRulesToGeneral)
+	r.POST("/transactions/:transactionID/classify", a.classifyTransaction)
+	r.POST("/classify/reclassify", a.reclassifyGeneral)
+	r.GET("/classify/status", a.reclassifyStatus)
 
 	r.POST("/fcm-tokens", a.registerFCMToken)
 	r.DELETE("/fcm-tokens", a.unregisterFCMToken)

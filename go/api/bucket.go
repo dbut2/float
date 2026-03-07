@@ -29,6 +29,7 @@ func (a *API) createBucket(c *gin.Context) {
 	var body struct {
 		Name         string  `json:"name"`
 		CurrencyCode *string `json:"currency_code"`
+		Description  string  `json:"description"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -39,6 +40,7 @@ func (a *API) createBucket(c *gin.Context) {
 		UserID:       userID,
 		Name:         body.Name,
 		CurrencyCode: body.CurrencyCode,
+		Description:  body.Description,
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -143,4 +145,64 @@ func (a *API) listBucketTransactions(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, txs)
+}
+
+func (a *API) updateBucketDescription(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
+	bucketID, err := uuid.Parse(c.Param("bucketID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid bucket ID"})
+		return
+	}
+
+	var body struct {
+		Description string `json:"description"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := a.buckets.UpdateBucketDescription(c.Request.Context(), bucketID, userID, body.Description); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+func (a *API) reclassifyGeneral(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
+	started := a.classifier.StartReclassifyGeneral(userID)
+	if !started {
+		c.JSON(http.StatusConflict, gin.H{"error": "reclassification already in progress"})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{"status": "started"})
+}
+
+func (a *API) reclassifyStatus(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	status := a.classifier.GetReclassifyStatus(userID)
+	c.JSON(http.StatusOK, status)
+}
+
+func (a *API) classifyTransaction(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
+	txID, err := uuid.Parse(c.Param("transactionID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid transaction ID"})
+		return
+	}
+
+	if err := a.classifier.ClassifyOne(c.Request.Context(), userID, txID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

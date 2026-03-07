@@ -23,13 +23,25 @@ func (q *Queries) CloseBucket(ctx context.Context, bucketID uuid.UUID, userID uu
 }
 
 const createBucket = `-- name: CreateBucket :one
-INSERT INTO float.buckets (user_id, name, currency_code)
-VALUES ($1, $2, $3)
-RETURNING bucket_id, user_id, name, is_general, created_at, display_order, currency_code, status
+INSERT INTO float.buckets (user_id, name, currency_code, description)
+VALUES ($1, $2, $3, $4)
+RETURNING bucket_id, user_id, name, is_general, created_at, display_order, currency_code, status, description
 `
 
-func (q *Queries) CreateBucket(ctx context.Context, userID uuid.UUID, name string, currencyCode sql.NullString) (FloatBucket, error) {
-	row := q.db.QueryRowContext(ctx, createBucket, userID, name, currencyCode)
+type CreateBucketParams struct {
+	UserID       uuid.UUID
+	Name         string
+	CurrencyCode sql.NullString
+	Description  string
+}
+
+func (q *Queries) CreateBucket(ctx context.Context, arg CreateBucketParams) (FloatBucket, error) {
+	row := q.db.QueryRowContext(ctx, createBucket,
+		arg.UserID,
+		arg.Name,
+		arg.CurrencyCode,
+		arg.Description,
+	)
 	var i FloatBucket
 	err := row.Scan(
 		&i.BucketID,
@@ -40,6 +52,7 @@ func (q *Queries) CreateBucket(ctx context.Context, userID uuid.UUID, name strin
 		&i.DisplayOrder,
 		&i.CurrencyCode,
 		&i.Status,
+		&i.Description,
 	)
 	return i, err
 }
@@ -66,7 +79,7 @@ func (q *Queries) EnsureGeneralBucket(ctx context.Context, userID uuid.UUID) err
 }
 
 const getBucket = `-- name: GetBucket :one
-SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
+SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, b.description, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
 FROM float.buckets b
 LEFT JOIN float.bucket_ledger l ON b.bucket_id = l.bucket_id
 WHERE b.bucket_id = $1 AND b.user_id = $2 AND b.status = 'active'
@@ -82,6 +95,7 @@ type GetBucketRow struct {
 	DisplayOrder sql.NullInt32
 	CurrencyCode sql.NullString
 	Status       string
+	Description  string
 	BalanceCents int64
 }
 
@@ -97,13 +111,14 @@ func (q *Queries) GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid
 		&i.DisplayOrder,
 		&i.CurrencyCode,
 		&i.Status,
+		&i.Description,
 		&i.BalanceCents,
 	)
 	return i, err
 }
 
 const getGeneralBucket = `-- name: GetGeneralBucket :one
-SELECT bucket_id, user_id, name, is_general, created_at, display_order, currency_code, status FROM float.buckets WHERE user_id = $1 AND is_general = TRUE
+SELECT bucket_id, user_id, name, is_general, created_at, display_order, currency_code, status, description FROM float.buckets WHERE user_id = $1 AND is_general = TRUE
 `
 
 func (q *Queries) GetGeneralBucket(ctx context.Context, userID uuid.UUID) (FloatBucket, error) {
@@ -118,12 +133,56 @@ func (q *Queries) GetGeneralBucket(ctx context.Context, userID uuid.UUID) (Float
 		&i.DisplayOrder,
 		&i.CurrencyCode,
 		&i.Status,
+		&i.Description,
 	)
 	return i, err
 }
 
+const listBucketSampleTransactions = `-- name: ListBucketSampleTransactions :many
+SELECT DISTINCT ON (t.description) t.description, t.amount_cents, t.category_id, t.foreign_currency_code
+FROM float.up_transactions t
+WHERE t.bucket_id = $1
+ORDER BY t.description, t.created_at DESC
+LIMIT 10
+`
+
+type ListBucketSampleTransactionsRow struct {
+	Description         string
+	AmountCents         int64
+	CategoryID          sql.NullString
+	ForeignCurrencyCode sql.NullString
+}
+
+func (q *Queries) ListBucketSampleTransactions(ctx context.Context, bucketID uuid.UUID) ([]ListBucketSampleTransactionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listBucketSampleTransactions, bucketID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBucketSampleTransactionsRow
+	for rows.Next() {
+		var i ListBucketSampleTransactionsRow
+		if err := rows.Scan(
+			&i.Description,
+			&i.AmountCents,
+			&i.CategoryID,
+			&i.ForeignCurrencyCode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listBuckets = `-- name: ListBuckets :many
-SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
+SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, b.description, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
 FROM float.buckets b
 LEFT JOIN float.bucket_ledger l ON b.bucket_id = l.bucket_id
 WHERE b.user_id = $1 AND b.status = 'active'
@@ -140,6 +199,7 @@ type ListBucketsRow struct {
 	DisplayOrder sql.NullInt32
 	CurrencyCode sql.NullString
 	Status       string
+	Description  string
 	BalanceCents int64
 }
 
@@ -161,6 +221,7 @@ func (q *Queries) ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBuck
 			&i.DisplayOrder,
 			&i.CurrencyCode,
 			&i.Status,
+			&i.Description,
 			&i.BalanceCents,
 		); err != nil {
 			return nil, err
@@ -195,5 +256,14 @@ WHERE bucket_id = $1 AND user_id = $3
 
 func (q *Queries) SetBucketDisplayOrder(ctx context.Context, bucketID uuid.UUID, displayOrder sql.NullInt32, userID uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, setBucketDisplayOrder, bucketID, displayOrder, userID)
+	return err
+}
+
+const updateBucketDescription = `-- name: UpdateBucketDescription :exec
+UPDATE float.buckets SET description = $2 WHERE bucket_id = $1 AND user_id = $3
+`
+
+func (q *Queries) UpdateBucketDescription(ctx context.Context, bucketID uuid.UUID, description string, userID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, updateBucketDescription, bucketID, description, userID)
 	return err
 }

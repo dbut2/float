@@ -14,11 +14,12 @@ import (
 )
 
 type WebhookService struct {
-	q database.Querier
+	q          database.Querier
+	classifier *ClassifierService
 }
 
-func NewWebhookService(q database.Querier) *WebhookService {
-	return &WebhookService{q: q}
+func NewWebhookService(q database.Querier, classifier *ClassifierService) *WebhookService {
+	return &WebhookService{q: q, classifier: classifier}
 }
 
 func (s *WebhookService) EnsureWebhook(ctx context.Context, userID uuid.UUID, baseURL string) (bool, error) {
@@ -92,6 +93,8 @@ func (s *WebhookService) ProcessEvent(ctx context.Context, userID uuid.UUID, pay
 		}
 		txID := payload.Data.Relationships.Transaction.Data.Id
 
+		log.Printf("webhook %s: tx %s for user %s", eventType, txID, userID)
+
 		nullToken, err := s.q.GetUserToken(ctx, userID)
 		if err != nil {
 			return err
@@ -119,10 +122,19 @@ func (s *WebhookService) ProcessEvent(ctx context.Context, userID uuid.UUID, pay
 		if err != nil {
 			return err
 		}
-		if inserted {
-			if _, err := applyRules(ctx, s.q, userID, params.TransactionID, params.Description, params.AmountCents, params.TransactionType, params.CategoryID, params.CreatedAt, params.ForeignCurrencyCode); err != nil {
-				log.Printf("applyRules for tx %s: %v", params.TransactionID, err)
-			}
+
+		// Classify on CREATED if new, or on SETTLED always (SETTLED has full
+		// category data which improves classification accuracy).
+		shouldClassify := inserted || eventType == "TRANSACTION_SETTLED"
+		if shouldClassify && s.classifier != nil {
+			log.Printf("webhook: queuing classification for tx %s (inserted=%v, event=%s)", params.TransactionID, inserted, eventType)
+			go func() {
+				if err := s.classifier.ClassifyTransaction(context.Background(), userID, params.TransactionID, params.Description, params.AmountCents, params.TransactionType, params.CategoryID, params.CreatedAt, params.ForeignCurrencyCode); err != nil {
+					log.Printf("classify tx %s: %v", params.TransactionID, err)
+				} else {
+					log.Printf("classify tx %s: done", params.TransactionID)
+				}
+			}()
 		}
 		return nil
 

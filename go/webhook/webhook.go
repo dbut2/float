@@ -26,8 +26,8 @@ type Handler struct {
 	svc Service
 }
 
-func New(q database.Querier) *Handler {
-	return &Handler{svc: service.NewWebhookService(q)}
+func New(q database.Querier, classifier *service.ClassifierService) *Handler {
+	return &Handler{svc: service.NewWebhookService(q, classifier)}
 }
 
 func (h *Handler) Register(r gin.IRouter) {

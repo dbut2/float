@@ -127,6 +127,7 @@ export default function Dashboard() {
   const qc = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
+  const [newDescription, setNewDescription] = useState('')
   const [isTravel, setIsTravel] = useState(false)
   const [newCurrency, setNewCurrency] = useState('JPY')
   const [orderedBuckets, setOrderedBuckets] = useState<Bucket[]>([])
@@ -155,10 +156,11 @@ export default function Dashboard() {
   })
 
   const create = useMutation({
-    mutationFn: () => api.createBucket(newName.trim(), isTravel ? newCurrency : undefined),
+    mutationFn: () => api.createBucket(newName.trim(), isTravel ? newCurrency : undefined, newDescription.trim() || undefined),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['buckets'] })
       setNewName('')
+      setNewDescription('')
       setIsTravel(false)
       setNewCurrency('JPY')
       setShowCreate(false)
@@ -166,7 +168,7 @@ export default function Dashboard() {
   })
 
   const isDesktop = useMediaQuery('(min-width: 768px)')
-  const handleCreateClose = () => { setShowCreate(false); setNewName(''); setIsTravel(false); setNewCurrency('JPY') }
+  const handleCreateClose = () => { setShowCreate(false); setNewName(''); setNewDescription(''); setIsTravel(false); setNewCurrency('JPY') }
   const { handleRef: createHandleRef, sheetStyle: createSheetStyle, backdropStyle: createBackdropStyle, onAnimationEnd: createOnAnimationEnd } = useDraggableSheet({ onClose: handleCreateClose, isOpen: showCreate })
 
   function onDragHandlePointerDown(e: React.PointerEvent, index: number) {
@@ -358,6 +360,26 @@ export default function Dashboard() {
                 fontSize: 16,
                 outline: 'none',
                 marginBottom: 12,
+              }}
+            />
+            <textarea
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="Describe what belongs here (optional)"
+              rows={2}
+              style={{
+                width: '100%',
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                padding: '14px 16px',
+                color: 'var(--text)',
+                fontFamily: 'DM Sans',
+                fontSize: 15,
+                outline: 'none',
+                marginBottom: 12,
+                resize: 'none',
+                boxSizing: 'border-box',
               }}
             />
             <button

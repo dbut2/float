@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, Filter, Inbox, RotateCw, Trash2, X, Archive } from 'lucide-react'
+import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, Sparkles, Inbox, RotateCw, Trash2, X, Archive } from 'lucide-react'
 import { api, formatDate, type Transaction, type Transfer, type Trickle } from '../lib/api'
 import AssignSheet from '../components/AssignSheet'
-import RulesSheet from '../components/RulesSheet'
+import DescriptionSheet from '../components/RulesSheet'
 import TransferSheet from '../components/TransferSheet'
 import TrickleSheet from '../components/TrickleSheet'
 import { useDraggableSheet } from '../hooks/useDraggableSheet'
@@ -228,9 +228,9 @@ export default function BucketDetail() {
                   justifyContent: 'center',
                   cursor: 'pointer',
                 }}
-                title="Manage rules"
+                title="Edit description"
               >
-                <Filter size={16} strokeWidth={1.75} />
+                <Sparkles size={16} strokeWidth={1.75} />
               </button>
             )}
             {!bucket?.is_general && (
@@ -803,7 +803,7 @@ export default function BucketDetail() {
         <TrickleSheet bucketId={bucketId} trickle={trickle} onClose={() => setShowTrickle(false)} />
       )}
       {showRules && bucketId && (
-        <RulesSheet bucketId={bucketId} onClose={() => setShowRules(false)} />
+        <DescriptionSheet bucketId={bucketId} onClose={() => setShowRules(false)} />
       )}
     </div>
   )
