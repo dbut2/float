@@ -196,9 +196,9 @@ func (s *ClassifierService) buildPrompt(ctx context.Context, buckets []database.
 	sb.WriteString("The user has these budget buckets:\n")
 
 	for _, b := range buckets {
-		sb.WriteString(fmt.Sprintf("- %q", b.Name))
+		_, _ = fmt.Fprintf(&sb, "- %q", b.Name)
 		if b.Description != "" {
-			sb.WriteString(fmt.Sprintf(": %s", b.Description))
+			sb.WriteString(": " + b.Description)
 		}
 		sb.WriteString("\n")
 
@@ -223,20 +223,20 @@ func (s *ClassifierService) buildPrompt(ctx context.Context, buckets []database.
 	}
 
 	sb.WriteString("\nClassify this transaction:\n")
-	sb.WriteString(fmt.Sprintf("- Description: %s\n", description))
-	sb.WriteString(fmt.Sprintf("- Amount: %s\n", utils.FormatSignedAmount(amountCents, "AUD")))
+	sb.WriteString("- Description: " + description + "\n")
+	sb.WriteString("- Amount: " + utils.FormatSignedAmount(amountCents, "AUD") + "\n")
 	if categoryID.Valid {
-		sb.WriteString(fmt.Sprintf("- Category: %s\n", categoryID.String))
+		sb.WriteString("- Category: " + categoryID.String + "\n")
 	}
 	if txType.Valid {
-		sb.WriteString(fmt.Sprintf("- Type: %s\n", txType.String))
+		sb.WriteString("- Type: " + txType.String + "\n")
 	}
 	currency := "AUD"
 	if foreignCurrencyCode.Valid {
 		currency = foreignCurrencyCode.String
 	}
-	sb.WriteString(fmt.Sprintf("- Currency: %s\n", currency))
-	sb.WriteString(fmt.Sprintf("- Date: %s\n", createdAt.Format("2006-01-02")))
+	sb.WriteString("- Currency: " + currency + "\n")
+	sb.WriteString("- Date: " + createdAt.Format("2006-01-02") + "\n")
 
 	sb.WriteString("\nWhich bucket does this belong to? If none are a good fit, respond with \"General\".\n")
 	sb.WriteString("Respond with JSON: {\"bucket_name\": \"...\", \"confidence\": 0.0-1.0, \"reasoning\": \"...\"}\n")
