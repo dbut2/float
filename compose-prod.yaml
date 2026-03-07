@@ -20,6 +20,7 @@ services:
     environment:
       - DATABASE_DSN=${PROD_DSN}
       - BASE_URL=https://float.dbut.dev
+      - OLLAMA_URL=${OLLAMA_URL}
     networks:
       - web
       - default
