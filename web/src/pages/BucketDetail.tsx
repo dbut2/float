@@ -180,7 +180,8 @@ export default function BucketDetail() {
           padding: '20px 20px 0',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <button
             onClick={() => navigate('/')}
             style={{
@@ -199,20 +200,6 @@ export default function BucketDetail() {
           >
             <ChevronLeft size={18} strokeWidth={1.75} />
           </button>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h1
-              className="line-clamp-1"
-              style={{
-                fontFamily: 'Syne',
-                fontWeight: 800,
-                fontSize: 22,
-                color: 'var(--text)',
-                lineHeight: 1.1,
-              }}
-            >
-              {bucket?.name ?? '…'}
-            </h1>
-          </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {!bucket?.is_general && (
               <button
@@ -307,6 +294,18 @@ export default function BucketDetail() {
               </button>
             )}
           </div>
+          </div>
+          <h1
+            style={{
+              fontFamily: 'Syne',
+              fontWeight: 800,
+              fontSize: 22,
+              color: 'var(--text)',
+              lineHeight: 1.1,
+            }}
+          >
+            {bucket?.name ?? '…'}
+          </h1>
         </div>
 
         {!bucket?.is_general && (
