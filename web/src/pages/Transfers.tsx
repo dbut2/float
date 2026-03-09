@@ -72,42 +72,44 @@ export default function Transfers() {
                 padding: '14px 16px',
                 marginBottom: 10,
                 display: 'flex',
-                alignItems: 'center',
-                gap: 12,
+                flexDirection: 'column',
+                gap: 6,
               }}
             >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500, marginBottom: 3 }}>
-                  <span style={{ color: 'var(--text-2)' }}>{t.from_bucket_name}</span>
-                  {' → '}
-                  <span>{t.to_bucket_name}</span>
-                </p>
-                {t.note && (
-                  <p className="line-clamp-1" style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 3 }}>{t.note}</p>
-                )}
-                <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{formatDate(t.created_at)}</p>
-              </div>
-              <p className="amount-neutral" style={{ fontSize: 16, fontWeight: 600, flexShrink: 0 }}>
-                {t.display_amount}
+              <p className="line-clamp-1" style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>
+                <span style={{ color: 'var(--text-2)' }}>{t.from_bucket_name}</span>
+                {' → '}
+                <span>{t.to_bucket_name}</span>
               </p>
-              <button
-                onClick={() => deleteTransfer.mutate(t.transfer_id)}
-                disabled={pendingDeleteId === t.transfer_id}
-                style={{
-                  background: 'rgba(248,113,113,0.1)',
-                  border: 'none',
-                  borderRadius: 8,
-                  width: 32,
-                  height: 32,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                }}
-              >
-                <Trash2 size={14} strokeWidth={1.75} color="var(--red)" />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {t.note && (
+                    <p className="line-clamp-1" style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 2 }}>{t.note}</p>
+                  )}
+                  <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{formatDate(t.created_at)}</p>
+                </div>
+                <p className="amount-neutral" style={{ fontSize: 16, fontWeight: 600, flexShrink: 0 }}>
+                  {t.display_amount}
+                </p>
+                <button
+                  onClick={() => deleteTransfer.mutate(t.transfer_id)}
+                  disabled={pendingDeleteId === t.transfer_id}
+                  style={{
+                    background: 'rgba(248,113,113,0.1)',
+                    border: 'none',
+                    borderRadius: 8,
+                    width: 32,
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Trash2 size={14} strokeWidth={1.75} color="var(--red)" />
+                </button>
+              </div>
             </div>
           ))
         )}
