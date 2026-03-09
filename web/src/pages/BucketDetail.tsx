@@ -181,7 +181,7 @@ export default function BucketDetail() {
         }}
       >
         <div style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <button
             onClick={() => navigate('/')}
             style={{
@@ -387,6 +387,46 @@ export default function BucketDetail() {
         )}
       </div>
 
+      {/* Balance card */}
+      <div style={{ padding: '0 20px 16px' }}>
+        <div
+          style={{
+            background: 'var(--surface)',
+            borderRadius: 16,
+            padding: '16px 20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <p
+            style={{
+              fontFamily: 'Syne',
+              fontWeight: 700,
+              fontSize: 12,
+              letterSpacing: '0.08em',
+              color: 'var(--text-2)',
+            }}
+          >
+            BALANCE
+          </p>
+          {bucket?.foreign_balance_display ? (
+            <div style={{ textAlign: 'right' }}>
+              <p className={bucket.balance_display.startsWith("-") ? 'amount-negative' : 'amount-positive'} style={{ fontSize: 24, fontWeight: 600 }}>
+                {bucket.foreign_balance_display} {bucket.currency_code}
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 3 }}>
+                {bucket.balance_display} AUD
+              </p>
+            </div>
+          ) : (
+            <p className="amount-neutral" style={{ fontSize: 24, fontWeight: 600 }}>
+              {bucket ? bucket.balance_display : '—'}
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Transaction list */}
       <div style={{ padding: '8px 20px 24px' }}>
         <p
@@ -580,46 +620,6 @@ export default function BucketDetail() {
           })
         )}
 
-        {/* Balance card */}
-        <div
-          style={{
-            background: 'var(--surface)',
-            borderRadius: 16,
-            padding: '16px 20px',
-            marginTop: 16,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <p
-            style={{
-              fontFamily: 'Syne',
-              fontWeight: 700,
-              fontSize: 12,
-              letterSpacing: '0.08em',
-              color: 'var(--text-2)',
-            }}
-          >
-            BALANCE
-          </p>
-          {bucket?.foreign_balance_display ? (
-            <div style={{ textAlign: 'right' }}>
-              <p className={bucket.balance_display.startsWith("-") ? 'amount-negative' : 'amount-positive'} style={{ fontSize: 24, fontWeight: 600 }}>
-                {bucket.foreign_balance_display} {bucket.currency_code}
-              </p>
-              <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 3 }}>
-                {bucket.balance_display} AUD
-              </p>
-            </div>
-          ) : (
-            <p className="amount-neutral" style={{ fontSize: 24, fontWeight: 600 }}>
-              {bucket
-                ? bucket.balance_display
-                : '—'}
-            </p>
-          )}
-        </div>
       </div>
 
       {/* Delete confirmation sheet — portalled to body to clear nav tabs */}
