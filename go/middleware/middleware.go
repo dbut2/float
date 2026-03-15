@@ -13,7 +13,7 @@ import (
 )
 
 func Middleware(queries database.Querier, baseURL string) gin.HandlerFunc {
-	webhookSvc := service.NewWebhookService(queries, nil)
+	webhookSvc := service.NewWebhookService(queries, nil, nil)
 
 	var emailToUserID sync.Map
 	var generalBucketEnsured sync.Map

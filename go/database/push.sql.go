@@ -40,10 +40,11 @@ func (q *Queries) GetUserFCMTokens(ctx context.Context, userID uuid.UUID) ([]str
 }
 
 const registerFCMToken = `-- name: RegisterFCMToken :exec
-INSERT INTO float.fcm_tokens (user_id, fcm_token)
-VALUES ($1, $2)
-ON CONFLICT (fcm_token) DO UPDATE SET
-    user_id = EXCLUDED.user_id
+WITH deleted AS (
+    DELETE FROM float.fcm_tokens WHERE user_id = $1
+)
+INSERT INTO float.fcm_tokens (user_id, fcm_token) VALUES ($1, $2)
+ON CONFLICT (fcm_token) DO UPDATE SET user_id = EXCLUDED.user_id
 `
 
 func (q *Queries) RegisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error {

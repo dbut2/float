@@ -1,13 +1,17 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"os"
 
+	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/messaging"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
+	"google.golang.org/api/option"
 
 	floatDB "dbut.dev/float/db"
 	"dbut.dev/float/go/api"
@@ -62,9 +66,30 @@ func setup(r *gin.Engine) (*api.API, gin.HandlerFunc) {
 		log.Println("OLLAMA_URL not set, classification disabled")
 	}
 
-	webhook.New(queries, classifier).Register(r.Group("/webhook"))
+	push := service.NewPushService(queries, newFCMClient())
 
-	return api.New(queries, fx, classifier), middleware.Middleware(queries, os.Getenv("BASE_URL"))
+	webhook.New(queries, classifier, push).Register(r.Group("/webhook"))
+
+	return api.New(queries, fx, classifier, push), middleware.Middleware(queries, os.Getenv("BASE_URL"))
+}
+
+func newFCMClient() *messaging.Client {
+	creds := os.Getenv("FIREBASE_CREDENTIALS")
+	if creds == "" {
+		log.Println("FIREBASE_CREDENTIALS not set, push notifications disabled")
+		return nil
+	}
+	app, err := firebase.NewApp(context.Background(), nil, option.WithCredentialsJSON([]byte(creds)))
+	if err != nil {
+		log.Printf("firebase: failed to init app: %v", err)
+		return nil
+	}
+	client, err := app.Messaging(context.Background())
+	if err != nil {
+		log.Printf("firebase: failed to init messaging: %v", err)
+		return nil
+	}
+	return client
 }
 
 func runMigrations(db *sql.DB) {

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, RefreshCw, X } from 'lucide-react'
+import { Check, RefreshCw, X, Bell, BellOff } from 'lucide-react'
 import { api } from '../lib/api'
+import { useNotifications } from '../lib/notifications'
 
 function Section({
   title,
@@ -105,6 +106,8 @@ export default function Settings() {
     mutationFn: api.sync,
   })
 
+  const { permission, enabled: notifEnabled, loading: notifLoading, error: notifError, enable, disable } = useNotifications()
+
   return (
     <div style={{ padding: '24px 20px', minHeight: '100%' }}>
       <h1
@@ -121,7 +124,6 @@ export default function Settings() {
         Settings
       </h1>
 
-      {/* Account info */}
       <Section title="ACCOUNT">
         <Row
           label={me?.email ?? '—'}
@@ -141,7 +143,6 @@ export default function Settings() {
         />
       </Section>
 
-      {/* Up Bank token */}
       <Section title="UP BANK">
         <div
           style={{
@@ -206,7 +207,90 @@ export default function Settings() {
         </div>
       </Section>
 
-      {/* Sync */}
+      <Section title="NOTIFICATIONS">
+        {permission === 'unconfigured' ? (
+          <Row label="Push notifications" sublabel="Not configured" />
+        ) : permission === 'unsupported' ? (
+          <Row label="Push notifications" sublabel="Not supported in this browser" />
+        ) : (
+          <div
+            style={{
+              padding: '16px 18px',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontFamily: 'DM Sans', fontSize: 15, color: 'var(--text)', fontWeight: 500 }}>
+                  Push notifications
+                </p>
+                <p style={{ fontFamily: 'DM Sans', fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                  {notifEnabled
+                    ? 'Receive alerts for new transactions'
+                    : permission === 'denied'
+                    ? 'Blocked — change in browser settings'
+                    : 'Get alerts for incoming transactions'}
+                </p>
+              </div>
+              {permission === 'denied' ? (
+                <BellOff size={18} color="var(--text-3)" strokeWidth={1.75} />
+              ) : notifEnabled ? (
+                <button
+                  onClick={() => disable()}
+                  disabled={notifLoading}
+                  className="pressable"
+                  style={{
+                    background: 'var(--surface-2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    padding: '7px 14px',
+                    color: 'var(--text-2)',
+                    fontFamily: 'Syne',
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <BellOff size={13} strokeWidth={1.75} />
+                  {notifLoading ? '…' : 'Disable'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => enable()}
+                  disabled={notifLoading}
+                  className="pressable"
+                  style={{
+                    background: 'var(--accent)',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '7px 14px',
+                    color: '#000',
+                    fontFamily: 'Syne',
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Bell size={13} strokeWidth={1.75} />
+                  {notifLoading ? '…' : 'Enable'}
+                </button>
+              )}
+            </div>
+            {notifError && (
+              <p style={{ fontSize: 12, color: 'var(--red)', marginTop: 8, fontFamily: 'DM Sans', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <X size={12} strokeWidth={1.75} /> {notifError}
+              </p>
+            )}
+          </div>
+        )}
+      </Section>
+
       <Section title="DATA">
         <Row
           label="Sync transactions"
@@ -228,7 +312,6 @@ export default function Settings() {
         />
       </Section>
 
-      {/* App info */}
       <div style={{ textAlign: 'center', paddingBottom: 8 }}>
         <p
           style={{

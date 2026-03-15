@@ -25,6 +25,15 @@ func Register(r *gin.Engine) {
 		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
 	}
 
+	swJS, err := fs.ReadFile(web.Dist, "firebase-messaging-sw.js")
+	if err == nil {
+		r.GET("/firebase-messaging-sw.js", func(c *gin.Context) {
+			c.Header("Service-Worker-Allowed", "/")
+			c.Header("Cache-Control", "no-store")
+			c.Data(http.StatusOK, "application/javascript; charset=utf-8", swJS)
+		})
+	}
+
 	r.GET("/", serveIndex)
 	r.NoRoute(serveIndex)
 }
