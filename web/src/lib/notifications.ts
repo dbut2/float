@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getToken, deleteToken } from 'firebase/messaging'
 import { messagingPromise, isFirebaseConfigured } from './firebase'
+import { config } from './config'
 import { api } from './api'
 
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY
+const VAPID_KEY = config.FIREBASE_VAPID_KEY
 const FCM_TOKEN_KEY = 'fcm_token'
 
 export type NotificationPermission = 'default' | 'granted' | 'denied' | 'unsupported' | 'unconfigured'
