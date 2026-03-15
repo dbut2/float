@@ -155,6 +155,18 @@ export const api = {
 
   reclassifyStatus: () =>
     request<{ running: boolean; total: number; processed: number; reclassified: number }>('/api/classify/status'),
+
+  registerFCMToken: (token: string) =>
+    request<void>('/api/fcm-tokens', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    }),
+
+  unregisterFCMToken: (token: string) =>
+    request<void>('/api/fcm-tokens', {
+      method: 'DELETE',
+      body: JSON.stringify({ token }),
+    }),
 }
 
 

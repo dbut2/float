@@ -11,26 +11,20 @@ import (
 
 	"dbut.dev/float/go/database"
 	"dbut.dev/float/go/up"
+	"dbut.dev/float/go/utils"
 )
 
 type WebhookService struct {
 	q          database.Querier
 	classifier *ClassifierService
+	push       *PushService
 }
 
-func NewWebhookService(q database.Querier, classifier *ClassifierService) *WebhookService {
-	return &WebhookService{q: q, classifier: classifier}
+func NewWebhookService(q database.Querier, classifier *ClassifierService, push *PushService) *WebhookService {
+	return &WebhookService{q: q, classifier: classifier, push: push}
 }
 
 func (s *WebhookService) EnsureWebhook(ctx context.Context, userID uuid.UUID, baseURL string) (bool, error) {
-	secret, err := s.q.GetUserWebhookSecret(ctx, userID)
-	if err != nil {
-		return false, err
-	}
-	if secret.Valid {
-		return true, nil
-	}
-
 	nullToken, err := s.q.GetUserToken(ctx, userID)
 	if err != nil {
 		return false, err
@@ -50,6 +44,15 @@ func (s *WebhookService) EnsureWebhook(ctx context.Context, userID uuid.UUID, ba
 	if err != nil {
 		return false, err
 	}
+
+	// If the correct webhook is already registered, nothing to do.
+	for _, wh := range existing {
+		if wh.Attributes.Url == webhookURL {
+			return true, nil
+		}
+	}
+
+	// Correct webhook not found — delete any stale float webhooks and re-register.
 	for _, wh := range existing {
 		if strings.HasPrefix(wh.Attributes.Url, baseURL+"/webhook/up/") {
 			if err := client.DeleteWebhook(ctx, wh.Id); err != nil {
@@ -121,6 +124,13 @@ func (s *WebhookService) ProcessEvent(ctx context.Context, userID uuid.UUID, pay
 		inserted, err := s.q.UpsertUpTransaction(ctx, params)
 		if err != nil {
 			return err
+		}
+
+		if inserted && eventType == "TRANSACTION_CREATED" {
+			go s.push.SendNotification(context.Background(), userID,
+				params.Description,
+				utils.FormatSignedAmount(params.AmountCents, "AUD"),
+			)
 		}
 
 		// Classify on CREATED if new, or on SETTLED always (SETTLED has full

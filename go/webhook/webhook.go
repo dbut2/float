@@ -4,9 +4,12 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -26,8 +29,8 @@ type Handler struct {
 	svc Service
 }
 
-func New(q database.Querier, classifier *service.ClassifierService) *Handler {
-	return &Handler{svc: service.NewWebhookService(q, classifier)}
+func New(q database.Querier, classifier *service.ClassifierService, push *service.PushService) *Handler {
+	return &Handler{svc: service.NewWebhookService(q, classifier, push)}
 }
 
 func (h *Handler) Register(r gin.IRouter) {
@@ -49,6 +52,12 @@ func (h *Handler) handle(c *gin.Context) {
 
 	secret, err := h.svc.GetWebhookSecret(c.Request.Context(), userID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Stale webhook — user no longer exists in DB. Acknowledge so Up Bank stops retrying.
+			c.Status(http.StatusOK)
+			return
+		}
+		log.Printf("webhook: failed to get secret for user %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get webhook secret"})
 		return
 	}
@@ -68,6 +77,7 @@ func (h *Handler) handle(c *gin.Context) {
 	}
 
 	if err := h.svc.ProcessEvent(c.Request.Context(), userID, payload); err != nil {
+		log.Printf("webhook: failed to process event for user %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process event"})
 		return
 	}

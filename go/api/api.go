@@ -68,14 +68,14 @@ type API struct {
 	classifier   ClassifierServiceInterface
 }
 
-func New(q database.Querier, fx *frankfurter.FXClient, classifier *service.ClassifierService) *API {
+func New(q database.Querier, fx *frankfurter.FXClient, classifier *service.ClassifierService, push *service.PushService) *API {
 	fxSvc := service.NewFXService(q, fx)
 	return &API{
 		users:        service.NewUserService(q, classifier),
 		buckets:      service.NewBucketService(q, fxSvc),
 		transactions: service.NewTransactionService(q),
 		transfers:    service.NewTransferService(q),
-		push:         service.NewPushService(q),
+		push:         push,
 		trickles:     service.NewTrickleService(q),
 		classifier:   classifier,
 	}
