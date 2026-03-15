@@ -10,7 +10,7 @@ require (
 	github.com/oapi-codegen/runtime v1.2.0
 	github.com/ollama/ollama v0.17.7
 	github.com/pressly/goose/v3 v3.27.0
-	golang.org/x/text v0.34.0
+	golang.org/x/text v0.35.0
 	google.golang.org/api v0.231.0
 )
 
@@ -196,7 +196,7 @@ require (
 	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/term v0.40.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
