@@ -16,7 +16,7 @@ func (a *API) listTransfers(c *gin.Context) {
 
 	transfers, err := a.transfers.ListTransfers(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -54,7 +54,7 @@ func (a *API) createTransfer(c *gin.Context) {
 		Note:         body.Note,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (a *API) deleteTransfer(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 

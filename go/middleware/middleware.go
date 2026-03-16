@@ -4,9 +4,11 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"golang.org/x/time/rate"
 
 	"dbut.dev/float/go/database"
 	"dbut.dev/float/go/service"
@@ -76,4 +78,19 @@ func DemoAuth(userID uuid.UUID) gin.HandlerFunc {
 
 func GetUserID(c *gin.Context) uuid.UUID {
 	return c.MustGet("user_id").(uuid.UUID)
+}
+
+var syncRateLimiters sync.Map
+
+// SyncRateLimit returns a per-user rate limiter middleware: 1 request per minute.
+func SyncRateLimit() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := GetUserID(c)
+		v, _ := syncRateLimiters.LoadOrStore(userID, rate.NewLimiter(rate.Every(time.Minute), 1))
+		if !v.(*rate.Limiter).Allow() {
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "rate limit exceeded"})
+			return
+		}
+		c.Next()
+	}
 }

@@ -2,12 +2,15 @@ package api
 
 import (
 	"context"
+	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
 	"dbut.dev/float/go/database"
 	"dbut.dev/float/go/frankfurter"
+	"dbut.dev/float/go/middleware"
 	"dbut.dev/float/go/service"
 )
 
@@ -95,10 +98,17 @@ func NewDemo() (*API, uuid.UUID) {
 	}, demoService.UserID()
 }
 
+func internalError(c *gin.Context, err error) {
+	log.Printf("internal error: %v", err)
+	c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+}
+
 func (a *API) Register(r *gin.RouterGroup) {
+	syncLimit := middleware.SyncRateLimit()
+
 	r.GET("/user", a.getUser)
 	r.PUT("/user/token", a.putUserToken)
-	r.POST("/user/sync", a.postUserSync)
+	r.POST("/user/sync", syncLimit, a.postUserSync)
 	r.GET("/user/balance", a.getTransactBalance)
 
 	r.GET("/buckets", a.listBuckets)

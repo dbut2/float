@@ -20,7 +20,7 @@ func (a *API) getUser(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -39,7 +39,7 @@ func (a *API) putUserToken(c *gin.Context) {
 	}
 
 	if err := a.users.UpdateToken(c.Request.Context(), userID, body.Token); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -55,7 +55,7 @@ func (a *API) getTransactBalance(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "no token set"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -74,7 +74,7 @@ func (a *API) postUserSync(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "no token set"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 

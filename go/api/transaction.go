@@ -14,7 +14,7 @@ func (a *API) listTransactions(c *gin.Context) {
 
 	txs, err := a.transactions.ListTransactions(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -45,7 +45,7 @@ func (a *API) assignTransactionToBucket(c *gin.Context) {
 	}
 
 	if err := a.transactions.AssignToBucket(c.Request.Context(), transactionID, bucketID, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 

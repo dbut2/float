@@ -16,7 +16,7 @@ func (a *API) listBuckets(c *gin.Context) {
 
 	buckets, err := a.buckets.ListBuckets(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (a *API) createBucket(c *gin.Context) {
 		Description:  body.Description,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -65,7 +65,7 @@ func (a *API) getBucket(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -82,7 +82,7 @@ func (a *API) deleteBucket(c *gin.Context) {
 	}
 
 	if err := a.buckets.DeleteBucket(c.Request.Context(), bucketID, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -103,7 +103,7 @@ func (a *API) closeBucket(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (a *API) reorderBuckets(c *gin.Context) {
 	}
 
 	if err := a.buckets.ReorderBuckets(c.Request.Context(), userID, body.BucketIDs); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -140,7 +140,7 @@ func (a *API) listBucketTransactions(c *gin.Context) {
 
 	txs, err := a.buckets.ListBucketTransactions(c.Request.Context(), bucketID, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -165,7 +165,7 @@ func (a *API) updateBucketDescription(c *gin.Context) {
 	}
 
 	if err := a.buckets.UpdateBucketDescription(c.Request.Context(), bucketID, userID, body.Description); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -200,7 +200,7 @@ func (a *API) classifyTransaction(c *gin.Context) {
 	}
 
 	if err := a.classifier.ClassifyOne(c.Request.Context(), userID, txID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
