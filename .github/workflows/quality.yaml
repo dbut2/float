@@ -14,21 +14,5 @@ jobs:
   quality:
     uses: dbut2/x/.github/workflows/quality-go.yaml@main
 
-  generate:
-    name: Go Generate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: ./go.mod
-      - run: go mod download
-      - run: go generate ./...
-      - run: git diff --exit-code
-
   docker:
-    name: Docker Compose
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - run: docker compose build
+    uses: dbut2/x/.github/workflows/quality-docker.yaml@main
