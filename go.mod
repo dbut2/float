@@ -11,6 +11,7 @@ require (
 	github.com/ollama/ollama v0.18.0
 	github.com/pressly/goose/v3 v3.27.0
 	golang.org/x/text v0.35.0
+	golang.org/x/time v0.15.0
 	google.golang.org/api v0.272.0
 )
 
@@ -199,7 +200,6 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/term v0.41.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
 	google.golang.org/appengine/v2 v2.0.6 // indirect
 	google.golang.org/genproto v0.0.0-20260217215200-42d3e9bedb6d // indirect
