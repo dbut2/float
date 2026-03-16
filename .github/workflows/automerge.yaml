@@ -10,6 +10,8 @@ on:
 jobs:
   automerge:
     uses: dbut2/x/.github/workflows/automerge.yaml@main
+    permissions:
+      checks: read
     with:
       required-checks: |
         - Build Check
