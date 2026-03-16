@@ -79,7 +79,7 @@ func newFCMClient() *messaging.Client {
 		log.Println("FIREBASE_CREDENTIALS not set, push notifications disabled")
 		return nil
 	}
-	app, err := firebase.NewApp(context.Background(), nil, option.WithCredentialsJSON([]byte(creds)))
+	app, err := firebase.NewApp(context.Background(), nil, option.WithAuthCredentialsJSON(option.ServiceAccount, []byte(creds)))
 	if err != nil {
 		log.Printf("firebase: failed to init app: %v", err)
 		return nil
