@@ -45,8 +45,8 @@ func (s *TransactionService) ListTransactions(ctx context.Context, userID uuid.U
 	return toTransactions(rows), nil
 }
 
-func (s *TransactionService) AssignToBucket(ctx context.Context, transactionID, bucketID uuid.UUID) error {
-	return s.q.AssignTransactionToBucket(ctx, transactionID, bucketID)
+func (s *TransactionService) AssignToBucket(ctx context.Context, transactionID, bucketID, userID uuid.UUID) error {
+	return s.q.AssignTransactionToBucket(ctx, transactionID, bucketID, userID)
 }
 
 func (s *TransactionService) CreateTransaction(ctx context.Context, tx Transaction) (Transaction, error) {

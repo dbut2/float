@@ -31,7 +31,7 @@ type BucketService interface {
 
 type TransactionService interface {
 	ListTransactions(ctx context.Context, userID uuid.UUID) ([]service.Transaction, error)
-	AssignToBucket(ctx context.Context, transactionID, bucketID uuid.UUID) error
+	AssignToBucket(ctx context.Context, transactionID, bucketID, userID uuid.UUID) error
 }
 
 type TransferService interface {
