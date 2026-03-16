@@ -20,7 +20,7 @@ func (a *API) registerFCMToken(c *gin.Context) {
 	}
 
 	if err := a.push.RegisterToken(c.Request.Context(), userID, body.Token); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
@@ -39,7 +39,7 @@ func (a *API) unregisterFCMToken(c *gin.Context) {
 	}
 
 	if err := a.push.UnregisterToken(c.Request.Context(), userID, body.Token); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 
