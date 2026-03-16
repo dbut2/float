@@ -11,105 +11,24 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Go Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: ./go.mod
-
-      - name: Download modules
-        run: go mod download
-
-      - name: Run tests
-        run: go test -v ./go/...
-
-  lint:
-    name: golangci-lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: ./go.mod
-
-      - name: Download modules
-        run: go mod download
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
-
-  build:
-    name: Build Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: ./go.mod
-
-      - name: Download modules
-        run: go mod download
-
-      - name: Build
-        run: go build ./go/...
-
-  tidy:
-    name: Go Mod Tidy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: ./go.mod
-
-      - name: Run go mod tidy
-        run: go mod tidy
-
-      - name: Check for drift
-        run: git diff --exit-code go.mod go.sum
+  quality:
+    uses: dbut2/x/.github/workflows/quality-go.yaml@main
 
   generate:
     name: Go Generate
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version-file: ./go.mod
-
-      - name: Download modules
-        run: go mod download
-
-      - name: Run go generate
-        run: go generate ./...
-
-      - name: Check for drift
-        run: git diff --exit-code
+      - run: go mod download
+      - run: go generate ./...
+      - run: git diff --exit-code
 
   docker:
     name: Docker Compose
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-
-      - name: Build images
-        run: docker compose build
+      - uses: actions/checkout@v6
+      - run: docker compose build
