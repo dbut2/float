@@ -22,6 +22,8 @@ func (a *API) listTransactions(c *gin.Context) {
 }
 
 func (a *API) assignTransactionToBucket(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
 	transactionID, err := uuid.Parse(c.Param("transactionID"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid transaction ID"})
@@ -42,7 +44,7 @@ func (a *API) assignTransactionToBucket(c *gin.Context) {
 		return
 	}
 
-	if err := a.transactions.AssignToBucket(c.Request.Context(), transactionID, bucketID); err != nil {
+	if err := a.transactions.AssignToBucket(c.Request.Context(), transactionID, bucketID, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

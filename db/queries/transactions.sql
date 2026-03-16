@@ -34,12 +34,14 @@ ORDER BY l.created_at DESC;
 -- name: AssignTransactionToBucket :exec
 UPDATE float.up_transactions
 SET bucket_id = $2
-WHERE transaction_id = $1;
+WHERE transaction_id = $1
+AND bucket_id IN (SELECT bucket_id FROM float.buckets WHERE user_id = $3);
 
 -- name: ListBucketTransactions :many
-SELECT * FROM float.bucket_ledger
-WHERE bucket_id = $1
-ORDER BY created_at DESC;
+SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.foreign_currency_code, l.foreign_amount_cents, l.created_at, l.is_transaction FROM float.bucket_ledger l
+JOIN float.buckets b USING (bucket_id)
+WHERE l.bucket_id = $1 AND b.user_id = $2
+ORDER BY l.created_at DESC;
 
 -- name: DeleteUpTransaction :exec
 DELETE FROM float.up_transactions WHERE transaction_id = $1;

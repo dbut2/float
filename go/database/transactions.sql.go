@@ -18,10 +18,11 @@ const assignTransactionToBucket = `-- name: AssignTransactionToBucket :exec
 UPDATE float.up_transactions
 SET bucket_id = $2
 WHERE transaction_id = $1
+AND bucket_id IN (SELECT bucket_id FROM float.buckets WHERE user_id = $3)
 `
 
-func (q *Queries) AssignTransactionToBucket(ctx context.Context, transactionID uuid.UUID, bucketID uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, assignTransactionToBucket, transactionID, bucketID)
+func (q *Queries) AssignTransactionToBucket(ctx context.Context, transactionID uuid.UUID, bucketID uuid.UUID, userID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, assignTransactionToBucket, transactionID, bucketID, userID)
 	return err
 }
 
@@ -58,13 +59,14 @@ func (q *Queries) GetTransaction(ctx context.Context, transactionID uuid.UUID, u
 }
 
 const listBucketTransactions = `-- name: ListBucketTransactions :many
-SELECT transaction_id, bucket_id, description, message, amount_cents, foreign_currency_code, foreign_amount_cents, created_at, is_transaction FROM float.bucket_ledger
-WHERE bucket_id = $1
-ORDER BY created_at DESC
+SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.foreign_currency_code, l.foreign_amount_cents, l.created_at, l.is_transaction FROM float.bucket_ledger l
+JOIN float.buckets b USING (bucket_id)
+WHERE l.bucket_id = $1 AND b.user_id = $2
+ORDER BY l.created_at DESC
 `
 
-func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID) ([]FloatBucketLedger, error) {
-	rows, err := q.db.QueryContext(ctx, listBucketTransactions, bucketID)
+func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) ([]FloatBucketLedger, error) {
+	rows, err := q.db.QueryContext(ctx, listBucketTransactions, bucketID, userID)
 	if err != nil {
 		return nil, err
 	}

@@ -13,7 +13,7 @@ import (
 )
 
 type Querier interface {
-	AssignTransactionToBucket(ctx context.Context, transactionID uuid.UUID, bucketID uuid.UUID) error
+	AssignTransactionToBucket(ctx context.Context, transactionID uuid.UUID, bucketID uuid.UUID, userID uuid.UUID) error
 	CloseBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) error
 	CreateBucket(ctx context.Context, arg CreateBucketParams) (FloatBucket, error)
 	CreateTransfer(ctx context.Context, arg CreateTransferParams) (FloatBucketTransfer, error)
@@ -36,7 +36,7 @@ type Querier interface {
 	InsertClassificationLog(ctx context.Context, arg InsertClassificationLogParams) error
 	InsertTrickle(ctx context.Context, arg InsertTrickleParams) (FloatBucketTrickle, error)
 	ListBucketSampleTransactions(ctx context.Context, bucketID uuid.UUID) ([]ListBucketSampleTransactionsRow, error)
-	ListBucketTransactions(ctx context.Context, bucketID uuid.UUID) ([]FloatBucketLedger, error)
+	ListBucketTransactions(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) ([]FloatBucketLedger, error)
 	ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBucketsRow, error)
 	ListTransactions(ctx context.Context, userID uuid.UUID) ([]FloatBucketLedger, error)
 	ListTransfers(ctx context.Context, userID uuid.UUID) ([]ListTransfersRow, error)

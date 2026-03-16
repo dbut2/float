@@ -259,7 +259,7 @@ func (s *DemoService) ListTransactions(_ context.Context, _ uuid.UUID) ([]Transa
 	return s.ledger, nil
 }
 
-func (s *DemoService) AssignToBucket(_ context.Context, _, _ uuid.UUID) error {
+func (s *DemoService) AssignToBucket(_ context.Context, _, _, _ uuid.UUID) error {
 	return nil
 }
 

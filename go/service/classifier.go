@@ -86,7 +86,7 @@ func (s *ClassifierService) ClassifyTransaction(ctx context.Context, userID, txI
 	}
 
 	if chosenBucketID != generalBucketID {
-		if err := s.q.AssignTransactionToBucket(ctx, txID, chosenBucketID); err != nil {
+		if err := s.q.AssignTransactionToBucket(ctx, txID, chosenBucketID, userID); err != nil {
 			return fmt.Errorf("assign transaction: %w", err)
 		}
 	}
@@ -152,7 +152,7 @@ func (s *ClassifierService) runReclassify(userID uuid.UUID, status *ReclassifySt
 		return
 	}
 
-	txs, err := s.q.ListBucketTransactions(ctx, general.BucketID)
+	txs, err := s.q.ListBucketTransactions(ctx, general.BucketID, userID)
 	if err != nil {
 		log.Printf("reclassify: list transactions: %v", err)
 		return

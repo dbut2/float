@@ -250,7 +250,7 @@ func (b *Bucket) setDisplays() {
 }
 
 func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID, userID uuid.UUID) ([]Transaction, error) {
-	rows, err := s.q.ListBucketTransactions(ctx, bucketID)
+	rows, err := s.q.ListBucketTransactions(ctx, bucketID, userID)
 	if err != nil {
 		return nil, err
 	}
