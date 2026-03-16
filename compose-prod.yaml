@@ -2,7 +2,7 @@ name: float
 
 services:
   float-demo:
-    build: .
+    image: ghcr.io/dbut2/float:latest
     environment:
       - DEMO_MODE=true
       - BASE_URL=https://float-demo.dbut.dev
@@ -14,9 +14,10 @@ services:
       "traefik.http.routers.float-demo.entrypoints": "web"
       "traefik.http.routers.float-demo.rule": "Host(`float-demo.dbut.dev`)"
       "traefik.http.services.float-demo.loadbalancer.server.port": "8080"
+      "com.centurylinklabs.watchtower.scope": "float"
 
   float:
-    build: .
+    image: ghcr.io/dbut2/float:latest
     environment:
       - DATABASE_DSN=${PROD_DSN}
       - BASE_URL=https://float.dbut.dev
@@ -38,6 +39,26 @@ services:
       "traefik.http.routers.float.entrypoints": "web"
       "traefik.http.routers.float.rule": "Host(`float.dbut.dev`)"
       "traefik.http.services.float.loadbalancer.server.port": "8080"
+      "com.centurylinklabs.watchtower.scope": "float"
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_HTTP_API_UPDATE=true
+      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_TOKEN}
+      - WATCHTOWER_HTTP_API_PERIODIC_POLLS=false
+      - WATCHTOWER_SCOPE=float
+    labels:
+      "traefik.docker.network": "web"
+      "traefik.enable": "true"
+      "traefik.http.routers.watchtower-float.entrypoints": "web"
+      "traefik.http.routers.watchtower-float.rule": "Host(`watchtower-float.dbut.dev`)"
+      "traefik.http.services.watchtower-float.loadbalancer.server.port": "8080"
+      "com.centurylinklabs.watchtower.scope": "float"
+    networks:
+      - web
 
 networks:
   web:
