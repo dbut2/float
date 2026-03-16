@@ -46,4 +46,4 @@ jobs:
 
       - name: Trigger Watchtower update
         run: |
-          curl -sf -H "Authorization: Bearer ${{ secrets.WATCHTOWER_TOKEN }}" https://watchtower-float.dbut.dev/v1/update
+          curl -fsS -o /dev/null -w "HTTP %{http_code}\n" -H "Authorization: Bearer ${{ secrets.WATCHTOWER_TOKEN }}" https://watchtower-float.dbut.dev/v1/update
