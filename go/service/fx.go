@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"time"
 
 	"dbut.dev/float/go/database"
 	"dbut.dev/float/go/frankfurter"
+	"dbut.dev/float/go/utils"
 )
 
 type FXService struct {
@@ -27,7 +27,7 @@ func (s *FXService) GetRate(ctx context.Context, base, quote string) (float64, e
 		return 0, fmt.Errorf("FX service not configured")
 	}
 
-	today := time.Now().Truncate(24 * time.Hour)
+	today := utils.Today()
 
 	rate, err := s.q.GetFXRate(ctx, base, quote, today)
 	if err == nil {

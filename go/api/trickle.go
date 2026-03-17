@@ -10,6 +10,7 @@ import (
 
 	"dbut.dev/float/go/middleware"
 	"dbut.dev/float/go/service"
+	"dbut.dev/float/go/utils"
 )
 
 func (a *API) listTrickles(c *gin.Context) {
@@ -67,7 +68,7 @@ func (a *API) upsertTrickle(c *gin.Context) {
 		return
 	}
 
-	startDate, err := time.Parse("2006-01-02", body.StartDate)
+	startDate, err := time.ParseInLocation("2006-01-02", body.StartDate, utils.Location)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start_date, expected YYYY-MM-DD"})
 		return
@@ -75,7 +76,7 @@ func (a *API) upsertTrickle(c *gin.Context) {
 
 	var endDate *time.Time
 	if body.EndDate != nil {
-		t, err := time.Parse("2006-01-02", *body.EndDate)
+		t, err := time.ParseInLocation("2006-01-02", *body.EndDate, utils.Location)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end_date, expected YYYY-MM-DD"})
 			return
