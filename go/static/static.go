@@ -2,7 +2,6 @@ package static
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
@@ -24,50 +23,38 @@ var configKeys = []string{
 }
 
 func Register(r *gin.Engine) {
-	assetsFS, err := fs.Sub(web.Dist, "assets")
-	if err != nil {
-		panic(err)
-	}
-	r.StaticFS("/assets", http.FS(assetsFS))
-
 	configMap := make(map[string]string)
 	for _, key := range configKeys {
 		configMap[key] = os.Getenv("VITE_" + key)
-	}
-
-	indexHTML, err := fs.ReadFile(web.Dist, "index.html")
-	if err != nil {
-		panic(err)
 	}
 
 	configJSON, err := json.Marshal(configMap)
 	if err != nil {
 		panic(err)
 	}
-	configScript := fmt.Sprintf(`<script>window.__CONFIG__=%s</script>`, configJSON)
-	indexStr := strings.Replace(string(indexHTML), "</head>", configScript+"</head>", 1)
-	indexBytes := []byte(indexStr)
+
+	r.GET("/config.json", func(c *gin.Context) {
+		c.Data(http.StatusOK, "application/json; charset=utf-8", configJSON)
+	})
+
+	indexHTML, err := fs.ReadFile(web.Dist, "index.html")
+	if err != nil {
+		panic(err)
+	}
 
 	serveIndex := func(c *gin.Context) {
-		c.Data(http.StatusOK, "text/html; charset=utf-8", indexBytes)
+		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
 	}
 
-	// Replace placeholders in service worker JS
-	swJS, err := fs.ReadFile(web.Dist, "firebase-messaging-sw.js")
-	if err == nil {
-		swStr := string(swJS)
-		for _, key := range configKeys {
-			swStr = strings.ReplaceAll(swStr, "__"+key+"__", configMap[key])
-		}
-		swBytes := []byte(swStr)
-
-		r.GET("/firebase-messaging-sw.js", func(c *gin.Context) {
-			c.Header("Service-Worker-Allowed", "/")
-			c.Header("Cache-Control", "no-store")
-			c.Data(http.StatusOK, "application/javascript; charset=utf-8", swBytes)
-		})
-	}
-
+	distFS := http.FS(web.Dist)
 	r.GET("/", serveIndex)
-	r.NoRoute(serveIndex)
+	r.NoRoute(func(c *gin.Context) {
+		path := strings.TrimPrefix(c.Request.URL.Path, "/")
+		if f, err := web.Dist.Open(path); err == nil {
+			f.Close()
+			c.FileFromFS(c.Request.URL.Path, distFS)
+			return
+		}
+		serveIndex(c)
+	})
 }

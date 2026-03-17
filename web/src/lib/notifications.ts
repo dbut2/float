@@ -1,33 +1,41 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getToken, deleteToken } from 'firebase/messaging'
-import { messagingPromise, isFirebaseConfigured } from './firebase'
-import { config } from './config'
+import { messagingPromise, firebaseReady } from './firebase'
+import { getConfig } from './config'
 import { api } from './api'
 
-const VAPID_KEY = config.FIREBASE_VAPID_KEY
 const FCM_TOKEN_KEY = 'fcm_token'
 
 export type NotificationPermission = 'default' | 'granted' | 'denied' | 'unsupported' | 'unconfigured'
 
 export function useNotifications() {
-  const [permission, setPermission] = useState<NotificationPermission>(() => {
-    if (!isFirebaseConfigured) return 'unconfigured'
-    if (!('Notification' in window)) return 'unsupported'
-    return Notification.permission as NotificationPermission
-  })
+  const [permission, setPermission] = useState<NotificationPermission>('default')
+  const [ready, setReady] = useState(false)
   const [registered, setRegistered] = useState(() => !!localStorage.getItem(FCM_TOKEN_KEY))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Sync permission state if user changes it in browser settings
   useEffect(() => {
-    if (permission === 'unsupported' || permission === 'unconfigured') return
+    firebaseReady.then(configured => {
+      if (!configured) {
+        setPermission('unconfigured')
+      } else if (!('Notification' in window)) {
+        setPermission('unsupported')
+      } else {
+        setPermission(Notification.permission as NotificationPermission)
+      }
+      setReady(true)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!ready || permission === 'unsupported' || permission === 'unconfigured') return
     const interval = setInterval(() => {
       const current = Notification.permission as NotificationPermission
       setPermission(current)
     }, 2000)
     return () => clearInterval(interval)
-  }, [permission])
+  }, [ready, permission])
 
   const enable = useCallback(async () => {
     setLoading(true)
@@ -54,7 +62,8 @@ export function useNotifications() {
         if (swURL.includes('firebase-messaging-sw')) await reg.unregister()
       }
       const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { type: 'module', updateViaCache: 'none' })
-      const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration })
+      const config = await getConfig()
+      const token = await getToken(messaging, { vapidKey: config.FIREBASE_VAPID_KEY, serviceWorkerRegistration: swRegistration })
       await api.registerFCMToken(token)
       localStorage.setItem(FCM_TOKEN_KEY, token)
       setRegistered(true)
