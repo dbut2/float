@@ -224,7 +224,7 @@ func (s *DemoService) ListBuckets(_ context.Context, _ uuid.UUID) ([]Bucket, err
 
 func (s *DemoService) CreateBucket(_ context.Context, bucket Bucket) (Bucket, error) {
 	bucket.BucketID = uuid.New()
-	bucket.CreatedAt = time.Now()
+	bucket.CreatedAt = utils.Now()
 	return bucket, nil
 }
 
@@ -269,7 +269,7 @@ func (s *DemoService) ListTransfers(_ context.Context, _ uuid.UUID) ([]Transfer,
 
 func (s *DemoService) CreateTransfer(_ context.Context, transfer Transfer) (Transfer, error) {
 	transfer.TransferID = uuid.New()
-	transfer.CreatedAt = time.Now()
+	transfer.CreatedAt = utils.Now()
 	return transfer, nil
 }
 
@@ -300,7 +300,7 @@ func (s *DemoService) GetTrickle(_ context.Context, toBucketID, _ uuid.UUID) (Tr
 
 func (s *DemoService) UpsertTrickle(_ context.Context, trickle Trickle) (Trickle, error) {
 	trickle.TrickleID = uuid.New()
-	trickle.CreatedAt = time.Now()
+	trickle.CreatedAt = utils.Now()
 	return trickle, nil
 }
 

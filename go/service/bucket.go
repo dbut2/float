@@ -72,7 +72,7 @@ func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bu
 	for i := range buckets {
 		byID[buckets[i].BucketID] = &buckets[i]
 	}
-	now := time.Now()
+	now := utils.Now()
 	for _, r := range trickleRows {
 		t := dbTrickleToService(r.TrickleID, r.FromBucketID, r.FromBucketName, r.ToBucketID, r.ToBucketName, r.AmountCents, r.Description, r.Period, r.StartDate, r.EndDate, r.CreatedAt)
 		amount := trickleAmount(t, now)
@@ -147,7 +147,7 @@ func (s *BucketService) GetBucket(ctx context.Context, bucketID, userID uuid.UUI
 		bucket.CurrencyCode = &b.CurrencyCode.String
 	}
 
-	now := time.Now()
+	now := utils.Now()
 	if bucket.IsGeneral {
 		trickleRows, _ := s.q.ListTrickles(ctx, userID)
 		for _, r := range trickleRows {
@@ -191,8 +191,8 @@ func (s *BucketService) CloseBucket(ctx context.Context, bucketID, userID uuid.U
 	// End active trickle (reuse DeleteTrickle logic)
 	existing, err := s.q.GetActiveTrickleByToBucketID(ctx, bucketID, userID)
 	if err == nil {
-		today := time.Now().UTC().Truncate(24 * time.Hour)
-		existingStart := existing.StartDate.UTC().Truncate(24 * time.Hour)
+		today := utils.Today()
+		existingStart := utils.ToDate(existing.StartDate)
 		if existingStart.Before(today) {
 			_ = s.q.SetTrickleEndDate(ctx, existing.TrickleID, sql.NullTime{Time: today, Valid: true}, userID)
 		} else {
@@ -257,7 +257,7 @@ func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID, us
 	txns := toTransactions(rows)
 
 	trickleRows, _ := s.q.GetTricklesByBucketID(ctx, bucketID)
-	now := time.Now()
+	now := utils.Now()
 	for _, r := range trickleRows {
 		t := dbTrickleToService(r.TrickleID, r.FromBucketID, r.FromBucketName, r.ToBucketID, r.ToBucketName, r.AmountCents, r.Description, r.Period, r.StartDate, r.EndDate, r.CreatedAt)
 		var createdAt time.Time

@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"dbut.dev/float/go/database"
+	"dbut.dev/float/go/utils"
 )
 
 type Trickle struct {
@@ -71,7 +72,7 @@ func (s *TrickleService) UpsertTrickle(ctx context.Context, trickle Trickle) (Tr
 		return Trickle{}, fmt.Errorf("invalid period: %s", trickle.Period)
 	}
 
-	today := time.Now().UTC().Truncate(24 * time.Hour)
+	today := utils.Today()
 	tomorrow := today.AddDate(0, 0, 1)
 
 	general, err := s.q.GetGeneralBucket(ctx, trickle.UserID)
@@ -100,7 +101,7 @@ func (s *TrickleService) UpsertTrickle(ctx context.Context, trickle Trickle) (Tr
 	if err == nil {
 		trickle.StartDate = nextOccurrence(existing.StartDate, trickle.Period, tomorrow)
 
-		existingStart := existing.StartDate.UTC().Truncate(24 * time.Hour)
+		existingStart := utils.ToDate(existing.StartDate)
 		if existingStart.Before(today) {
 			if err := s.q.SetTrickleEndDate(ctx, existing.TrickleID, sql.NullTime{Time: today, Valid: true}, trickle.UserID); err != nil {
 				return Trickle{}, err
@@ -111,7 +112,7 @@ func (s *TrickleService) UpsertTrickle(ctx context.Context, trickle Trickle) (Tr
 			}
 		}
 	} else {
-		if trickle.StartDate.UTC().Truncate(24 * time.Hour).Before(tomorrow) {
+		if utils.ToDate(trickle.StartDate).Before(tomorrow) {
 			return Trickle{}, fmt.Errorf("start_date must be tomorrow or later")
 		}
 	}
@@ -149,9 +150,9 @@ func (s *TrickleService) DeleteTrickle(ctx context.Context, toBucketID, userID u
 		return err
 	}
 
-	today := time.Now().UTC().Truncate(24 * time.Hour)
+	today := utils.Today()
 
-	existingStart := existing.StartDate.UTC().Truncate(24 * time.Hour)
+	existingStart := utils.ToDate(existing.StartDate)
 	if existingStart.Before(today) {
 		return s.q.SetTrickleEndDate(ctx, existing.TrickleID, sql.NullTime{Time: today, Valid: true}, userID)
 	}
@@ -160,14 +161,14 @@ func (s *TrickleService) DeleteTrickle(ctx context.Context, toBucketID, userID u
 }
 
 func trickleAmount(t Trickle, asOf time.Time) int64 {
-	asOfDate := asOf.UTC().Truncate(24 * time.Hour)
-	startDate := t.StartDate.UTC().Truncate(24 * time.Hour)
+	asOfDate := utils.ToDate(asOf)
+	startDate := utils.ToDate(t.StartDate)
 	if startDate.After(asOfDate) {
 		return 0
 	}
 	endDate := asOfDate
-	if t.EndDate != nil && t.EndDate.UTC().Truncate(24*time.Hour).Before(asOfDate) {
-		endDate = t.EndDate.UTC().Truncate(24 * time.Hour)
+	if t.EndDate != nil && utils.ToDate(*t.EndDate).Before(asOfDate) {
+		endDate = utils.ToDate(*t.EndDate)
 	}
 
 	days := int64(endDate.Sub(startDate) / (24 * time.Hour))
@@ -191,8 +192,8 @@ func trickleAmount(t Trickle, asOf time.Time) int64 {
 }
 
 func nextOccurrence(anchor time.Time, period string, minDate time.Time) time.Time {
-	anchor = anchor.UTC().Truncate(24 * time.Hour)
-	minDate = minDate.UTC().Truncate(24 * time.Hour)
+	anchor = utils.ToDate(anchor)
+	minDate = utils.ToDate(minDate)
 
 	if !anchor.Before(minDate) {
 		return anchor
