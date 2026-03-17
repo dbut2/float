@@ -34,6 +34,7 @@ export const messagingPromise: Promise<Messaging | null> = firebaseReady.then(as
   const supported = await isSupported()
   if (!supported) return null
   try {
+    await navigator.serviceWorker.register('/firebase-messaging-sw.js', { type: 'module', updateViaCache: 'none' })
     return getMessaging(_app)
   } catch {
     return null
