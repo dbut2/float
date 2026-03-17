@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.11.2
 	github.com/oapi-codegen/runtime v1.2.0
-	github.com/ollama/ollama v0.18.0
+	github.com/ollama/ollama v0.18.1
 	github.com/pressly/goose/v3 v3.27.0
 	golang.org/x/text v0.35.0
 	golang.org/x/time v0.15.0
