@@ -9,12 +9,10 @@ import (
 //go:embed dist/*
 var dist embed.FS
 
-var Dist fs.FS
-
-func init() {
-	var err error
-	Dist, err = fs.Sub(dist, "dist")
+var Dist = func() fs.FS {
+	d, err := fs.Sub(dist, "dist")
 	if err != nil {
 		log.Fatal(err)
 	}
-}
+	return d
+}()

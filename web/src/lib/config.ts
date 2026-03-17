@@ -8,4 +8,11 @@ interface AppConfig {
   FIREBASE_VAPID_KEY: string
 }
 
-export const config: AppConfig = (window as any).__CONFIG__ ?? {}
+let cached: AppConfig | null = null
+
+export async function getConfig(): Promise<AppConfig> {
+  if (!cached) {
+    cached = await fetch('/config.json').then(r => r.json())
+  }
+  return cached!
+}
