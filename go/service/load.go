@@ -12,45 +12,35 @@ import (
 )
 
 func LoadData(ctx context.Context, queries database.Querier, user User, buckets []Bucket, txs []Transaction, transfers []Transfer, trickles []Trickle) (uuid.UUID, error) {
-	dbUser, err := queries.UpsertUser(ctx, user.Email)
+	dbUser, err := queries.SeedUser(ctx, user.UserID, user.Email)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("upsert user: %w", err)
+		return uuid.Nil, fmt.Errorf("seed user: %w", err)
 	}
 	userID := dbUser.UserID
 
-	if err := queries.EnsureGeneralBucket(ctx, userID); err != nil {
-		return uuid.Nil, fmt.Errorf("ensure general bucket: %w", err)
-	}
-
-	generalBucket, err := queries.GetGeneralBucket(ctx, userID)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("get general bucket: %w", err)
-	}
-
-	bucketMap := make(map[uuid.UUID]uuid.UUID)
+	var generalBucketID uuid.UUID
 	for _, b := range buckets {
 		if b.IsGeneral {
-			bucketMap[b.BucketID] = generalBucket.BucketID
-			continue
+			generalBucketID = b.BucketID
 		}
 		cc := sql.NullString{}
 		if b.CurrencyCode != nil {
 			cc = sql.NullString{String: *b.CurrencyCode, Valid: true}
 		}
-		dbBucket, err := queries.CreateBucket(ctx, database.CreateBucketParams{
+		_, err := queries.SeedBucket(ctx, database.SeedBucketParams{
+			BucketID:     b.BucketID,
 			UserID:       userID,
 			Name:         b.Name,
+			IsGeneral:    b.IsGeneral,
 			CurrencyCode: cc,
 			Description:  b.Description,
 		})
 		if err != nil {
-			return uuid.Nil, fmt.Errorf("create bucket %s: %w", b.Name, err)
+			return uuid.Nil, fmt.Errorf("seed bucket %s: %w", b.Name, err)
 		}
-		bucketMap[b.BucketID] = dbBucket.BucketID
 	}
 
 	for _, tx := range txs {
-		targetBucketID := bucketMap[tx.BucketID]
 		fcc := sql.NullString{}
 		if tx.ForeignCurrencyCode != nil {
 			fcc = sql.NullString{String: *tx.ForeignCurrencyCode, Valid: true}
@@ -73,8 +63,8 @@ func LoadData(ctx context.Context, queries database.Querier, user User, buckets 
 		if err != nil {
 			return uuid.Nil, fmt.Errorf("upsert transaction %s: %w", tx.Description, err)
 		}
-		if targetBucketID != generalBucket.BucketID {
-			if err := queries.AssignTransactionToBucket(ctx, tx.TransactionID, targetBucketID, userID); err != nil {
+		if tx.BucketID != generalBucketID {
+			if err := queries.AssignTransactionToBucket(ctx, tx.TransactionID, tx.BucketID, userID); err != nil {
 				return uuid.Nil, fmt.Errorf("assign transaction to bucket: %w", err)
 			}
 		}
@@ -82,8 +72,8 @@ func LoadData(ctx context.Context, queries database.Querier, user User, buckets 
 
 	for _, t := range transfers {
 		_, err := queries.CreateTransfer(ctx, database.CreateTransferParams{
-			FromBucketID: bucketMap[t.FromBucketID],
-			ToBucketID:   bucketMap[t.ToBucketID],
+			FromBucketID: t.FromBucketID,
+			ToBucketID:   t.ToBucketID,
 			AmountCents:  t.AmountCents,
 			Note:         t.Note,
 		})
@@ -98,8 +88,8 @@ func LoadData(ctx context.Context, queries database.Querier, user User, buckets 
 			endDate = sql.NullTime{Time: *t.EndDate, Valid: true}
 		}
 		_, err := queries.InsertTrickle(ctx, database.InsertTrickleParams{
-			FromBucketID: bucketMap[t.FromBucketID],
-			ToBucketID:   bucketMap[t.ToBucketID],
+			FromBucketID: t.FromBucketID,
+			ToBucketID:   t.ToBucketID,
 			AmountCents:  t.AmountCents,
 			Description:  t.Description,
 			Period:       t.Period,

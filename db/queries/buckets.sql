@@ -3,6 +3,16 @@ INSERT INTO float.buckets (user_id, name, currency_code, description)
 VALUES ($1, $2, $3, $4)
 RETURNING *;
 
+-- name: SeedBucket :one
+INSERT INTO float.buckets (bucket_id, user_id, name, is_general, currency_code, description)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (user_id, name) DO UPDATE SET
+    bucket_id = EXCLUDED.bucket_id,
+    is_general = EXCLUDED.is_general,
+    currency_code = EXCLUDED.currency_code,
+    description = EXCLUDED.description
+RETURNING *;
+
 -- name: ListBuckets :many
 SELECT b.*, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
 FROM float.buckets b

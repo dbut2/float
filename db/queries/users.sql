@@ -4,6 +4,12 @@ VALUES ($1)
 ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
 RETURNING *;
 
+-- name: SeedUser :one
+INSERT INTO float.users (user_id, email)
+VALUES ($1, $2)
+ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
+RETURNING *;
+
 -- name: GetUserByID :one
 SELECT * FROM float.users
 WHERE user_id = $1;

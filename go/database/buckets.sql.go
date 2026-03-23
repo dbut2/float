@@ -248,6 +248,50 @@ func (q *Queries) ReassignBucketTransactionsToGeneral(ctx context.Context, bucke
 	return err
 }
 
+const seedBucket = `-- name: SeedBucket :one
+INSERT INTO float.buckets (bucket_id, user_id, name, is_general, currency_code, description)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (user_id, name) DO UPDATE SET
+    bucket_id = EXCLUDED.bucket_id,
+    is_general = EXCLUDED.is_general,
+    currency_code = EXCLUDED.currency_code,
+    description = EXCLUDED.description
+RETURNING bucket_id, user_id, name, is_general, created_at, display_order, currency_code, status, description
+`
+
+type SeedBucketParams struct {
+	BucketID     uuid.UUID
+	UserID       uuid.UUID
+	Name         string
+	IsGeneral    bool
+	CurrencyCode sql.NullString
+	Description  string
+}
+
+func (q *Queries) SeedBucket(ctx context.Context, arg SeedBucketParams) (FloatBucket, error) {
+	row := q.db.QueryRowContext(ctx, seedBucket,
+		arg.BucketID,
+		arg.UserID,
+		arg.Name,
+		arg.IsGeneral,
+		arg.CurrencyCode,
+		arg.Description,
+	)
+	var i FloatBucket
+	err := row.Scan(
+		&i.BucketID,
+		&i.UserID,
+		&i.Name,
+		&i.IsGeneral,
+		&i.CreatedAt,
+		&i.DisplayOrder,
+		&i.CurrencyCode,
+		&i.Status,
+		&i.Description,
+	)
+	return i, err
+}
+
 const setBucketDisplayOrder = `-- name: SetBucketDisplayOrder :exec
 UPDATE float.buckets
 SET display_order = $2
