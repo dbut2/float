@@ -3,16 +3,24 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
       time: "06:00"
       timezone: "Australia/Melbourne"
     labels:
       - "automerge"
+    groups:
+      all:
+        patterns:
+          - "*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
       time: "06:00"
       timezone: "Australia/Melbourne"
     labels:
       - "automerge"
+    groups:
+      all:
+        patterns:
+          - "*"
