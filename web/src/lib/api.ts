@@ -12,6 +12,7 @@ export interface Transaction {
   amount_cents: number
   display_amount: string
   created_at: string
+  display_date: string
   is_transaction: boolean
   transaction_type?: string | null
   raw_json?: unknown
@@ -44,6 +45,7 @@ export interface Transfer {
   display_amount: string
   note: string
   created_at: string
+  display_date: string
 }
 
 export interface Trickle {
@@ -169,22 +171,3 @@ export const api = {
     }),
 }
 
-
-export function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  const days = Math.floor(diff / 86400000)
-
-  if (days === 0) return 'Today'
-  if (days === 1) return 'Yesterday'
-  if (days < 7) return d.toLocaleDateString('en-AU', { weekday: 'long' })
-  return d.toLocaleDateString('en-AU', { month: 'short', day: 'numeric' })
-}
-
-export function formatDateShort(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-AU', {
-    month: 'short',
-    day: 'numeric',
-  })
-}

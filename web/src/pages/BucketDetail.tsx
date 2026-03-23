@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, Sparkles, Inbox, RotateCw, Trash2, X, Archive } from 'lucide-react'
-import { api, formatDate, type Transaction, type Transfer, type Trickle } from '../lib/api'
+import { api, type Transaction, type Transfer, type Trickle } from '../lib/api'
 import AssignSheet from '../components/AssignSheet'
 import DescriptionSheet from '../components/RulesSheet'
 import TransferSheet from '../components/TransferSheet'
@@ -512,7 +512,7 @@ export default function BucketDetail() {
                       {tx.description}
                     </p>
                     <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 3 }}>
-                      {formatDate(tx.created_at)}
+                      {tx.display_date}
                     </p>
                   </div>
                   {amountDisplay(isDebit, tx.display_amount, tx.foreign_display_amount, tx.foreign_currency_code, showForeignPrimary)}
@@ -561,7 +561,7 @@ export default function BucketDetail() {
                     )}
                     {!isActive && (
                       <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 3 }}>
-                        {formatDate(tx.created_at)}
+                        {tx.display_date}
                       </p>
                     )}
                   </div>
@@ -611,7 +611,7 @@ export default function BucketDetail() {
                     <p className="line-clamp-1" style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{t.note}</p>
                   )}
                   <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 3 }}>
-                    {formatDate(t.created_at)}
+                    {t.display_date}
                   </p>
                 </div>
                 {amountDisplay(isDebit, displayAmount, foreignDisplayAmount, foreignCurrencyCode, showForeignPrimary)}
