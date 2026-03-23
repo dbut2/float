@@ -70,6 +70,26 @@ func (q *Queries) GetUserWebhookSecret(ctx context.Context, userID uuid.UUID) (s
 	return webhook_secret, err
 }
 
+const seedUser = `-- name: SeedUser :one
+INSERT INTO float.users (user_id, email)
+VALUES ($1, $2)
+ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
+RETURNING user_id, email, created_at, up_token, webhook_secret
+`
+
+func (q *Queries) SeedUser(ctx context.Context, userID uuid.UUID, email string) (FloatUser, error) {
+	row := q.db.QueryRowContext(ctx, seedUser, userID, email)
+	var i FloatUser
+	err := row.Scan(
+		&i.UserID,
+		&i.Email,
+		&i.CreatedAt,
+		&i.UpToken,
+		&i.WebhookSecret,
+	)
+	return i, err
+}
+
 const setUserToken = `-- name: SetUserToken :exec
 UPDATE float.users SET up_token = $2 WHERE user_id = $1
 `

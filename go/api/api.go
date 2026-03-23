@@ -84,20 +84,6 @@ func New(q database.Querier, fx *frankfurter.FXClient, classifier *service.Class
 	}
 }
 
-func NewDemo() (*API, uuid.UUID) {
-	demoService := service.NewDemoService()
-
-	return &API{
-		users:        demoService,
-		buckets:      demoService,
-		transactions: demoService,
-		transfers:    demoService,
-		push:         demoService,
-		trickles:     demoService,
-		classifier:   demoService,
-	}, demoService.UserID()
-}
-
 func internalError(c *gin.Context, err error) {
 	log.Printf("internal error: %v", err)
 	c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
