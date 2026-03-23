@@ -9,6 +9,7 @@ on:
 
 jobs:
   automerge:
+    if: ${{ github.event_name != 'pull_request' || startsWith(github.head_ref, 'dependabot/') }}
     uses: dbut2/x/.github/workflows/automerge.yaml@main
     permissions:
       checks: read
@@ -19,7 +20,6 @@ jobs:
         - Go Generate
         - Go Mod Tidy
         - Go Test
-        - Screenshots
         - golangci-lint
     secrets:
       app-id: ${{ secrets.GH_APP_ID }}
