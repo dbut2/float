@@ -18,6 +18,7 @@ import (
 	"dbut.dev/float/go/database"
 	"dbut.dev/float/go/frankfurter"
 	"dbut.dev/float/go/middleware"
+	"dbut.dev/float/go/seed"
 	"dbut.dev/float/go/service"
 	"dbut.dev/float/go/static"
 	"dbut.dev/float/go/webhook"
@@ -40,11 +41,6 @@ func main() {
 }
 
 func setup(r *gin.Engine) (*api.API, gin.HandlerFunc) {
-	if os.Getenv("DEMO_MODE") == "true" {
-		apiHandler, userID := api.NewDemo()
-		return apiHandler, middleware.DemoAuth(userID)
-	}
-
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_DSN"))
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
@@ -67,6 +63,15 @@ func setup(r *gin.Engine) (*api.API, gin.HandlerFunc) {
 	}
 
 	push := service.NewPushService(queries, newFCMClient())
+
+	if os.Getenv("DEMO_MODE") == "true" {
+		user, buckets, txs, transfers, trickles := seed.DemoScenario()
+		userID, err := service.LoadData(context.Background(), queries, user, buckets, txs, transfers, trickles)
+		if err != nil {
+			log.Fatalf("failed to seed demo data: %v", err)
+		}
+		return api.New(queries, fx, classifier, push), middleware.DemoAuth(userID)
+	}
 
 	webhook.New(queries, classifier, push).Register(r.Group("/webhook"))
 
