@@ -21,6 +21,7 @@ type Transaction struct {
 	AmountCents          int64           `json:"amount_cents"`
 	DisplayAmount        string          `json:"display_amount"`
 	CreatedAt            time.Time       `json:"created_at"`
+	DisplayDate          string          `json:"display_date"`
 	IsTransaction        bool            `json:"is_transaction"`
 	TransactionType      *string         `json:"transaction_type,omitempty"`
 	RawJson              json.RawMessage `json:"raw_json,omitempty"`
@@ -91,6 +92,7 @@ func toTransactions(rows []database.FloatBucketLedger) []Transaction {
 			AmountCents:   r.AmountCents,
 			DisplayAmount: utils.FormatSignedAmount(r.AmountCents, "AUD"),
 			CreatedAt:     r.CreatedAt,
+			DisplayDate:   utils.FormatDate(r.CreatedAt),
 			IsTransaction: r.IsTransaction,
 		}
 		if r.ForeignCurrencyCode.Valid && r.ForeignAmountCents.Valid {

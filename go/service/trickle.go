@@ -223,6 +223,40 @@ func nextOccurrence(anchor time.Time, period string, minDate time.Time) time.Tim
 	return minDate
 }
 
+func trickleOccurrences(t Trickle, asOf time.Time) []time.Time {
+	asOfDate := utils.ToDate(asOf)
+	startDate := utils.ToDate(t.StartDate)
+	if startDate.After(asOfDate) {
+		return nil
+	}
+	endDate := asOfDate
+	if t.EndDate != nil && utils.ToDate(*t.EndDate).Before(asOfDate) {
+		endDate = utils.ToDate(*t.EndDate)
+	}
+
+	var dates []time.Time
+	for i := 0; ; i++ {
+		var d time.Time
+		switch t.Period {
+		case "daily":
+			d = startDate.AddDate(0, 0, i)
+		case "weekly":
+			d = startDate.AddDate(0, 0, i*7)
+		case "fortnightly":
+			d = startDate.AddDate(0, 0, i*14)
+		case "monthly":
+			d = startDate.AddDate(0, i, 0)
+		default:
+			return dates
+		}
+		if d.After(endDate) {
+			break
+		}
+		dates = append(dates, d)
+	}
+	return dates
+}
+
 func dbTrickleToService(trickleID, fromBucketID uuid.UUID, fromBucketName string, toBucketID uuid.UUID, toBucketName string, amountCents int64, description, period string, startDate time.Time, endDate sql.NullTime, createdAt time.Time) Trickle {
 	t := Trickle{
 		TrickleID:      trickleID,

@@ -260,30 +260,28 @@ func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID, us
 	now := utils.Now()
 	for _, r := range trickleRows {
 		t := dbTrickleToService(r.TrickleID, r.FromBucketID, r.FromBucketName, r.ToBucketID, r.ToBucketName, r.AmountCents, r.Description, r.Period, r.StartDate, r.EndDate, r.CreatedAt)
-		var createdAt time.Time
-		if t.EndDate != nil && t.EndDate.Before(now) {
-			createdAt = *t.EndDate
-		} else {
-			createdAt = now
-		}
-		if t.ToBucketID == bucketID {
-			amt := trickleAmount(t, now)
-			txns = append(txns, Transaction{
-				BucketID:      bucketID,
-				Description:   "Trickle from " + t.FromBucketName,
-				AmountCents:   amt,
-				DisplayAmount: utils.FormatSignedAmount(amt, "AUD"),
-				CreatedAt:     createdAt,
-			})
-		} else if t.FromBucketID == bucketID {
-			amt := -trickleAmount(t, now)
-			txns = append(txns, Transaction{
-				BucketID:      bucketID,
-				Description:   "Trickle to " + t.ToBucketName,
-				AmountCents:   amt,
-				DisplayAmount: utils.FormatSignedAmount(amt, "AUD"),
-				CreatedAt:     createdAt,
-			})
+		dates := trickleOccurrences(t, now)
+		for _, d := range dates {
+			if t.ToBucketID == bucketID {
+				txns = append(txns, Transaction{
+					BucketID:      bucketID,
+					Description:   "Trickle from " + t.FromBucketName,
+					AmountCents:   t.AmountCents,
+					DisplayAmount: utils.FormatSignedAmount(t.AmountCents, "AUD"),
+					CreatedAt:     d,
+					DisplayDate:   utils.FormatDate(d),
+				})
+			} else if t.FromBucketID == bucketID {
+				amt := -t.AmountCents
+				txns = append(txns, Transaction{
+					BucketID:      bucketID,
+					Description:   "Trickle to " + t.ToBucketName,
+					AmountCents:   amt,
+					DisplayAmount: utils.FormatSignedAmount(amt, "AUD"),
+					CreatedAt:     d,
+					DisplayDate:   utils.FormatDate(d),
+				})
+			}
 		}
 	}
 

@@ -2,6 +2,8 @@
 package utils
 
 import (
+	"time"
+
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -82,6 +84,24 @@ func baseUnitToMajor(baseUnits int64, currencyCode string) float64 {
 		return float64(baseUnits)
 	}
 	return float64(baseUnits) / 100.0
+}
+
+func FormatDate(t time.Time) string {
+	now := Now()
+	tDate := ToDate(t)
+	nowDate := ToDate(now)
+	days := int(nowDate.Sub(tDate) / (24 * time.Hour))
+
+	switch {
+	case days == 0:
+		return "Today"
+	case days == 1:
+		return "Yesterday"
+	case days < 7:
+		return t.In(Location).Format("Monday")
+	default:
+		return t.In(Location).Format("Jan 2")
+	}
 }
 
 func formatMajor(major float64, currencyCode string, includePositiveSign bool) string {

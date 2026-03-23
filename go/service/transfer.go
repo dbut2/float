@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"dbut.dev/float/go/database"
+	"dbut.dev/float/go/utils"
 )
 
 type Transfer struct {
@@ -19,6 +20,7 @@ type Transfer struct {
 	DisplayAmount  string    `json:"display_amount"`
 	Note           string    `json:"note"`
 	CreatedAt      time.Time `json:"created_at"`
+	DisplayDate    string    `json:"display_date"`
 }
 
 type TransferService struct {
@@ -46,6 +48,7 @@ func (s *TransferService) ListTransfers(ctx context.Context, userID uuid.UUID) (
 			DisplayAmount:  FormatCurrencyAmount(r.AmountCents, "AUD"),
 			Note:           r.Note,
 			CreatedAt:      r.CreatedAt,
+			DisplayDate:    utils.FormatDate(r.CreatedAt),
 		}
 	}
 	return transfers, nil
@@ -69,6 +72,7 @@ func (s *TransferService) CreateTransfer(ctx context.Context, transfer Transfer)
 		DisplayAmount: FormatCurrencyAmount(t.AmountCents, "AUD"),
 		Note:          t.Note,
 		CreatedAt:     t.CreatedAt,
+		DisplayDate:   utils.FormatDate(t.CreatedAt),
 	}, nil
 }
 
