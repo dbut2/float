@@ -43,6 +43,8 @@ type Querier interface {
 	ListTrickles(ctx context.Context, userID uuid.UUID) ([]ListTricklesRow, error)
 	ReassignBucketTransactionsToGeneral(ctx context.Context, bucketID uuid.UUID) error
 	RegisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error
+	SeedBucket(ctx context.Context, arg SeedBucketParams) (FloatBucket, error)
+	SeedUser(ctx context.Context, userID uuid.UUID, email string) (FloatUser, error)
 	SetBucketDisplayOrder(ctx context.Context, bucketID uuid.UUID, displayOrder sql.NullInt32, userID uuid.UUID) error
 	SetTrickleEndDate(ctx context.Context, trickleID uuid.UUID, endDate sql.NullTime, userID uuid.UUID) error
 	SetUserToken(ctx context.Context, userID uuid.UUID, upToken sql.NullString) error

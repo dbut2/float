@@ -10,6 +10,12 @@ import (
 
 type TransactionOption func(*service.Transaction)
 
+func WithTransactionID(id uuid.UUID) TransactionOption {
+	return func(t *service.Transaction) {
+		t.TransactionID = id
+	}
+}
+
 func WithDescription(s string) TransactionOption {
 	return func(t *service.Transaction) {
 		t.Description = s
@@ -22,20 +28,10 @@ func WithMessage(s string) TransactionOption {
 	}
 }
 
-var fxRates = map[string]float64{
-	"CNY": 4.5,
-	"JPY": 110,
-}
-
 func WithForeign(code string, foreignCents int64) TransactionOption {
 	return func(t *service.Transaction) {
-		rate, ok := fxRates[code]
-		if !ok {
-			panic("seed.WithForeign: unknown currency: " + code)
-		}
 		t.ForeignCurrencyCode = &code
 		t.ForeignAmountCents = &foreignCents
-		t.AmountCents = int64(float64(foreignCents) / rate)
 	}
 }
 
