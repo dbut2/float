@@ -34,15 +34,17 @@ type FloatBucketLedger struct {
 	ForeignAmountCents  sql.NullInt64
 	CreatedAt           time.Time
 	IsTransaction       bool
+	CoversTransactionID uuid.NullUUID
 }
 
 type FloatBucketTransfer struct {
-	TransferID   uuid.UUID
-	FromBucketID uuid.UUID
-	ToBucketID   uuid.UUID
-	AmountCents  int64
-	Note         string
-	CreatedAt    time.Time
+	TransferID          uuid.UUID
+	FromBucketID        uuid.UUID
+	ToBucketID          uuid.UUID
+	AmountCents         int64
+	Note                string
+	CreatedAt           time.Time
+	CoversTransactionID uuid.NullUUID
 }
 
 type FloatBucketTrickle struct {

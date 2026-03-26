@@ -61,11 +61,17 @@ type ClassifierServiceInterface interface {
 	GetReclassifyStatus(userID uuid.UUID) service.ReclassifyStatus
 }
 
+type CoverServiceInterface interface {
+	CreateCover(ctx context.Context, userID, transactionID uuid.UUID, amountCents int64, note string) (service.Cover, error)
+	DeleteCover(ctx context.Context, coverID, userID uuid.UUID) error
+}
+
 type API struct {
 	users        UserService
 	buckets      BucketService
 	transactions TransactionService
 	transfers    TransferService
+	covers       CoverServiceInterface
 	push         PushService
 	trickles     TrickleService
 	classifier   ClassifierServiceInterface
@@ -73,11 +79,13 @@ type API struct {
 
 func New(q database.Querier, fx *frankfurter.FXClient, classifier *service.ClassifierService, push *service.PushService) *API {
 	fxSvc := service.NewFXService(q, fx)
+	coverSvc := service.NewCoverService(q)
 	return &API{
 		users:        service.NewUserService(q, classifier),
-		buckets:      service.NewBucketService(q, fxSvc),
+		buckets:      service.NewBucketService(q, fxSvc, coverSvc),
 		transactions: service.NewTransactionService(q),
 		transfers:    service.NewTransferService(q),
+		covers:       coverSvc,
 		push:         push,
 		trickles:     service.NewTrickleService(q),
 		classifier:   classifier,
@@ -117,6 +125,9 @@ func (a *API) Register(r *gin.RouterGroup) {
 	r.GET("/buckets/:bucketID/trickle", a.getTrickle)
 	r.PUT("/buckets/:bucketID/trickle", a.upsertTrickle)
 	r.DELETE("/buckets/:bucketID/trickle", a.deleteTrickle)
+
+	r.POST("/transactions/:transactionID/covers", a.createCover)
+	r.DELETE("/covers/:coverID", a.deleteCover)
 
 	r.POST("/transactions/:transactionID/classify", a.classifyTransaction)
 	r.POST("/classify/reclassify", a.reclassifyGeneral)

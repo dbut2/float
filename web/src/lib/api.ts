@@ -4,6 +4,16 @@ export interface User {
   created_at: string
 }
 
+export interface Cover {
+  cover_id: string
+  transaction_id: string
+  amount_cents: number
+  display_amount: string
+  note: string
+  created_at: string
+  display_date: string
+}
+
 export interface Transaction {
   transaction_id: string
   bucket_id: string
@@ -19,6 +29,10 @@ export interface Transaction {
   foreign_currency_code?: string | null
   foreign_amount_cents?: number | null
   foreign_display_amount?: string | null
+  covers?: Cover[]
+  covers_amount_cents?: number
+  net_amount_cents?: number
+  net_display_amount?: string
 }
 
 export interface Bucket {
@@ -43,6 +57,7 @@ export interface Transfer {
   to_bucket_name: string
   amount_cents: number
   display_amount: string
+  description: string
   note: string
   created_at: string
   display_date: string
@@ -151,6 +166,15 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ description }),
     }),
+
+  createCover: (txId: string, amountCents: number, note: string) =>
+    request<Cover>(`/api/transactions/${txId}/covers`, {
+      method: 'POST',
+      body: JSON.stringify({ amount_cents: amountCents, note }),
+    }),
+
+  deleteCover: (coverId: string) =>
+    request<void>(`/api/covers/${coverId}`, { method: 'DELETE' }),
 
   reclassify: () =>
     request<{ status: string }>('/api/classify/reclassify', { method: 'POST' }),

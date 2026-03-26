@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, Sparkles, Inbox, RotateCw, Trash2, X, Archive } from 'lucide-react'
 import { api, type Transaction, type Transfer, type Trickle } from '../lib/api'
 import AssignSheet from '../components/AssignSheet'
+import CoverSheet from '../components/CoverSheet'
 import DescriptionSheet from '../components/RulesSheet'
 import TransferSheet from '../components/TransferSheet'
 import TrickleSheet from '../components/TrickleSheet'
@@ -69,6 +70,7 @@ export default function BucketDetail() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [assignTx, setAssignTx] = useState<Transaction | null>(null)
+  const [coverTx, setCoverTx] = useState<Transaction | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
   const [showTransfer, setShowTransfer] = useState(false)
@@ -474,11 +476,13 @@ export default function BucketDetail() {
           listItems.map((item, idx) => {
             if (item.kind === 'transaction') {
               const tx = item.tx
-              const isDebit = tx.display_amount.startsWith("-")
+              const displayAmt = tx.net_display_amount ?? tx.display_amount
+              const isCovered = (tx.covers_amount_cents ?? 0) > 0
+              const isDebit = displayAmt.startsWith("-")
               return (
                 <button
                   key={`tx-${idx}`}
-                  onClick={() => setAssignTx(tx)}
+                  onClick={() => setCoverTx(tx)}
                   className="pressable"
                   style={{
                     width: '100%',
@@ -511,11 +515,16 @@ export default function BucketDetail() {
                     <p className="line-clamp-1" style={{ fontSize: 15, color: 'var(--text)', fontWeight: 500 }}>
                       {tx.description}
                     </p>
-                    <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 3 }}>
-                      {tx.display_date}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                      <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{tx.display_date}</p>
+                      {isCovered && (
+                        <span style={{ fontSize: 10, fontFamily: 'Syne', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--accent)', background: 'rgba(202,255,51,0.12)', borderRadius: 4, padding: '1px 5px' }}>
+                          COVERED
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {amountDisplay(isDebit, tx.display_amount, tx.foreign_display_amount, tx.foreign_currency_code, showForeignPrimary)}
+                  {amountDisplay(isDebit, displayAmt, tx.foreign_display_amount, tx.foreign_currency_code, showForeignPrimary)}
                 </button>
               )
             }
@@ -573,10 +582,7 @@ export default function BucketDetail() {
             // Transfer item
             const { t, displayAmount, foreignDisplayAmount, foreignCurrencyCode } = item
             const isDebit = displayAmount.startsWith('-')
-            const otherName = isDebit
-              ? (t.to_bucket_name || 'General')
-              : (t.from_bucket_name || 'General')
-            const label = isDebit ? `Transfer to ${otherName}` : `Transfer from ${otherName}`
+            const label = t.description
             return (
               <div
                 key={`tr-${t.transfer_id}`}
@@ -794,6 +800,9 @@ export default function BucketDetail() {
 
       {assignTx && (
         <AssignSheet transaction={assignTx} onClose={() => setAssignTx(null)} />
+      )}
+      {coverTx && (
+        <CoverSheet transaction={coverTx} onClose={() => setCoverTx(null)} />
       )}
       {showTransfer && bucketId && (
         <TransferSheet initialFromBucketId={bucketId} onClose={() => setShowTransfer(false)} />

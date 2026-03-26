@@ -12,10 +12,13 @@ SELECT
     tb.name AS to_bucket_name,
     t.amount_cents,
     t.note,
-    t.created_at
+    t.created_at,
+    t.covers_transaction_id,
+    tx.description AS covered_tx_description
 FROM float.bucket_transfers t
 JOIN float.buckets fb ON t.from_bucket_id = fb.bucket_id
 JOIN float.buckets tb ON t.to_bucket_id = tb.bucket_id
+LEFT JOIN float.up_transactions tx ON t.covers_transaction_id = tx.transaction_id
 WHERE fb.user_id = $1
 ORDER BY t.created_at DESC;
 
