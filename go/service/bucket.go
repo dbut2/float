@@ -30,12 +30,13 @@ type Bucket struct {
 }
 
 type BucketService struct {
-	q  database.Querier
-	fx *FXService
+	q      database.Querier
+	fx     *FXService
+	covers *CoverService
 }
 
-func NewBucketService(q database.Querier, fx *FXService) *BucketService {
-	return &BucketService{q: q, fx: fx}
+func NewBucketService(q database.Querier, fx *FXService, covers *CoverService) *BucketService {
+	return &BucketService{q: q, fx: fx, covers: covers}
 }
 
 func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bucket, error) {
@@ -254,7 +255,16 @@ func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID, us
 	if err != nil {
 		return nil, err
 	}
-	txns := toTransactions(rows)
+
+	filtered := rows[:0]
+	for _, r := range rows {
+		if r.CoversTransactionID.Valid && r.AmountCents > 0 {
+			continue
+		}
+		filtered = append(filtered, r)
+	}
+
+	txns := toTransactions(filtered)
 
 	trickleRows, _ := s.q.GetTricklesByBucketID(ctx, bucketID)
 	now := utils.Now()
@@ -288,6 +298,27 @@ func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID, us
 	sort.Slice(txns, func(i, j int) bool {
 		return txns[i].CreatedAt.After(txns[j].CreatedAt)
 	})
+
+	if s.covers != nil {
+		coversByTx, err := s.covers.ListByBucket(ctx, bucketID)
+		if err == nil {
+			for i := range txns {
+				tx := &txns[i]
+				if !tx.IsTransaction {
+					continue
+				}
+				covers := coversByTx[tx.TransactionID]
+				var total int64
+				for _, c := range covers {
+					total += c.AmountCents
+				}
+				tx.Covers = covers
+				tx.CoversAmountCents = total
+				tx.NetAmountCents = tx.AmountCents + total
+				tx.NetDisplayAmount = utils.FormatSignedAmount(tx.NetAmountCents, "AUD")
+			}
+		}
+	}
 
 	// For travel buckets, enrich every transaction with a foreign display amount.
 	// Transactions already settled in the bucket's currency keep their exact rate;

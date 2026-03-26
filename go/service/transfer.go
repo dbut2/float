@@ -18,6 +18,7 @@ type Transfer struct {
 	ToBucketName   string    `json:"to_bucket_name"`
 	AmountCents    int64     `json:"amount_cents"`
 	DisplayAmount  string    `json:"display_amount"`
+	Description    string    `json:"description"`
 	Note           string    `json:"note"`
 	CreatedAt      time.Time `json:"created_at"`
 	DisplayDate    string    `json:"display_date"`
@@ -38,6 +39,10 @@ func (s *TransferService) ListTransfers(ctx context.Context, userID uuid.UUID) (
 	}
 	transfers := make([]Transfer, len(rows))
 	for i, r := range rows {
+		description := "Transfer to " + r.ToBucketName
+		if r.CoversTransactionID.Valid && r.CoveredTxDescription.Valid {
+			description = "Cover for " + r.CoveredTxDescription.String
+		}
 		transfers[i] = Transfer{
 			TransferID:     r.TransferID,
 			FromBucketID:   r.FromBucketID,
@@ -46,6 +51,7 @@ func (s *TransferService) ListTransfers(ctx context.Context, userID uuid.UUID) (
 			ToBucketName:   r.ToBucketName,
 			AmountCents:    r.AmountCents,
 			DisplayAmount:  FormatCurrencyAmount(r.AmountCents, "AUD"),
+			Description:    description,
 			Note:           r.Note,
 			CreatedAt:      r.CreatedAt,
 			DisplayDate:    utils.FormatDate(r.CreatedAt),

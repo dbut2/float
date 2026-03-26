@@ -16,8 +16,10 @@ type Querier interface {
 	AssignTransactionToBucket(ctx context.Context, transactionID uuid.UUID, bucketID uuid.UUID, userID uuid.UUID) error
 	CloseBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) error
 	CreateBucket(ctx context.Context, arg CreateBucketParams) (FloatBucket, error)
+	CreateCover(ctx context.Context, arg CreateCoverParams) (FloatBucketTransfer, error)
 	CreateTransfer(ctx context.Context, arg CreateTransferParams) (FloatBucketTransfer, error)
 	DeleteBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) error
+	DeleteCover(ctx context.Context, transferID uuid.UUID, userID uuid.UUID) (int64, error)
 	DeleteTransfer(ctx context.Context, transferID uuid.UUID, userID uuid.UUID) (int64, error)
 	DeleteTrickle(ctx context.Context, trickleID uuid.UUID, userID uuid.UUID) (int64, error)
 	DeleteUpTransaction(ctx context.Context, transactionID uuid.UUID) error
@@ -27,6 +29,7 @@ type Querier interface {
 	GetFXRate(ctx context.Context, baseCurrency string, quoteCurrency string, column3 time.Time) (float64, error)
 	GetGeneralBucket(ctx context.Context, userID uuid.UUID) (FloatBucket, error)
 	GetTransaction(ctx context.Context, transactionID uuid.UUID, userID uuid.UUID) (FloatBucketLedger, error)
+	GetTransactionOwner(ctx context.Context, transactionID uuid.UUID, userID uuid.UUID) (GetTransactionOwnerRow, error)
 	GetTricklesByBucketID(ctx context.Context, toBucketID uuid.UUID) ([]GetTricklesByBucketIDRow, error)
 	GetUserByEmail(ctx context.Context, email string) (FloatUser, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (FloatUser, error)
@@ -38,6 +41,8 @@ type Querier interface {
 	ListBucketSampleTransactions(ctx context.Context, bucketID uuid.UUID) ([]ListBucketSampleTransactionsRow, error)
 	ListBucketTransactions(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) ([]FloatBucketLedger, error)
 	ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBucketsRow, error)
+	ListCoversByBucket(ctx context.Context, bucketID uuid.UUID) ([]ListCoversByBucketRow, error)
+	ListCoversByTransaction(ctx context.Context, coversTransactionID uuid.NullUUID) ([]ListCoversByTransactionRow, error)
 	ListTransactions(ctx context.Context, userID uuid.UUID) ([]FloatBucketLedger, error)
 	ListTransfers(ctx context.Context, userID uuid.UUID) ([]ListTransfersRow, error)
 	ListTrickles(ctx context.Context, userID uuid.UUID) ([]ListTricklesRow, error)

@@ -36,7 +36,7 @@ func (q *Queries) DeleteUpTransaction(ctx context.Context, transactionID uuid.UU
 }
 
 const getTransaction = `-- name: GetTransaction :one
-SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.foreign_currency_code, l.foreign_amount_cents, l.created_at, l.is_transaction FROM float.bucket_ledger l
+SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.foreign_currency_code, l.foreign_amount_cents, l.created_at, l.is_transaction, l.covers_transaction_id FROM float.bucket_ledger l
 JOIN float.buckets b USING (bucket_id)
 WHERE l.transaction_id = $1 AND b.user_id = $2
 `
@@ -54,12 +54,13 @@ func (q *Queries) GetTransaction(ctx context.Context, transactionID uuid.UUID, u
 		&i.ForeignAmountCents,
 		&i.CreatedAt,
 		&i.IsTransaction,
+		&i.CoversTransactionID,
 	)
 	return i, err
 }
 
 const listBucketTransactions = `-- name: ListBucketTransactions :many
-SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.foreign_currency_code, l.foreign_amount_cents, l.created_at, l.is_transaction FROM float.bucket_ledger l
+SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.foreign_currency_code, l.foreign_amount_cents, l.created_at, l.is_transaction, l.covers_transaction_id FROM float.bucket_ledger l
 JOIN float.buckets b USING (bucket_id)
 WHERE l.bucket_id = $1 AND b.user_id = $2
 ORDER BY l.created_at DESC
@@ -84,6 +85,7 @@ func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID
 			&i.ForeignAmountCents,
 			&i.CreatedAt,
 			&i.IsTransaction,
+			&i.CoversTransactionID,
 		); err != nil {
 			return nil, err
 		}
@@ -99,7 +101,7 @@ func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID
 }
 
 const listTransactions = `-- name: ListTransactions :many
-SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.foreign_currency_code, l.foreign_amount_cents, l.created_at, l.is_transaction FROM float.bucket_ledger l
+SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.foreign_currency_code, l.foreign_amount_cents, l.created_at, l.is_transaction, l.covers_transaction_id FROM float.bucket_ledger l
 JOIN float.buckets b USING (bucket_id)
 WHERE b.user_id = $1
 ORDER BY l.created_at DESC
@@ -124,6 +126,7 @@ func (q *Queries) ListTransactions(ctx context.Context, userID uuid.UUID) ([]Flo
 			&i.ForeignAmountCents,
 			&i.CreatedAt,
 			&i.IsTransaction,
+			&i.CoversTransactionID,
 		); err != nil {
 			return nil, err
 		}

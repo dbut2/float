@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,7 +16,7 @@ import (
 const createTransfer = `-- name: CreateTransfer :one
 INSERT INTO float.bucket_transfers (from_bucket_id, to_bucket_id, amount_cents, note)
 VALUES ($1, $2, $3, $4)
-RETURNING transfer_id, from_bucket_id, to_bucket_id, amount_cents, note, created_at
+RETURNING transfer_id, from_bucket_id, to_bucket_id, amount_cents, note, created_at, covers_transaction_id
 `
 
 type CreateTransferParams struct {
@@ -40,6 +41,7 @@ func (q *Queries) CreateTransfer(ctx context.Context, arg CreateTransferParams) 
 		&i.AmountCents,
 		&i.Note,
 		&i.CreatedAt,
+		&i.CoversTransactionID,
 	)
 	return i, err
 }
@@ -67,23 +69,28 @@ SELECT
     tb.name AS to_bucket_name,
     t.amount_cents,
     t.note,
-    t.created_at
+    t.created_at,
+    t.covers_transaction_id,
+    tx.description AS covered_tx_description
 FROM float.bucket_transfers t
 JOIN float.buckets fb ON t.from_bucket_id = fb.bucket_id
 JOIN float.buckets tb ON t.to_bucket_id = tb.bucket_id
+LEFT JOIN float.up_transactions tx ON t.covers_transaction_id = tx.transaction_id
 WHERE fb.user_id = $1
 ORDER BY t.created_at DESC
 `
 
 type ListTransfersRow struct {
-	TransferID     uuid.UUID
-	FromBucketID   uuid.UUID
-	FromBucketName string
-	ToBucketID     uuid.UUID
-	ToBucketName   string
-	AmountCents    int64
-	Note           string
-	CreatedAt      time.Time
+	TransferID           uuid.UUID
+	FromBucketID         uuid.UUID
+	FromBucketName       string
+	ToBucketID           uuid.UUID
+	ToBucketName         string
+	AmountCents          int64
+	Note                 string
+	CreatedAt            time.Time
+	CoversTransactionID  uuid.NullUUID
+	CoveredTxDescription sql.NullString
 }
 
 func (q *Queries) ListTransfers(ctx context.Context, userID uuid.UUID) ([]ListTransfersRow, error) {
@@ -104,6 +111,8 @@ func (q *Queries) ListTransfers(ctx context.Context, userID uuid.UUID) ([]ListTr
 			&i.AmountCents,
 			&i.Note,
 			&i.CreatedAt,
+			&i.CoversTransactionID,
+			&i.CoveredTxDescription,
 		); err != nil {
 			return nil, err
 		}

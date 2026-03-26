@@ -28,6 +28,10 @@ type Transaction struct {
 	ForeignCurrencyCode  *string         `json:"foreign_currency_code,omitempty"`
 	ForeignAmountCents   *int64          `json:"foreign_amount_cents,omitempty"`
 	ForeignDisplayAmount *string         `json:"foreign_display_amount,omitempty"`
+	Covers               []Cover         `json:"covers,omitempty"`
+	CoversAmountCents    int64           `json:"covers_amount_cents"`
+	NetAmountCents       int64           `json:"net_amount_cents"`
+	NetDisplayAmount     string          `json:"net_display_amount"`
 }
 
 type TransactionService struct {
