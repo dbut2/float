@@ -8,7 +8,6 @@ package database
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -79,29 +78,13 @@ func (q *Queries) EnsureGeneralBucket(ctx context.Context, userID uuid.UUID) err
 }
 
 const getBucket = `-- name: GetBucket :one
-SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, b.description, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
-FROM float.buckets b
-LEFT JOIN float.bucket_ledger l ON b.bucket_id = l.bucket_id
+SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, b.description FROM float.buckets b
 WHERE b.bucket_id = $1 AND b.user_id = $2 AND b.status = 'active'
-GROUP BY b.bucket_id
 `
 
-type GetBucketRow struct {
-	BucketID     uuid.UUID
-	UserID       uuid.UUID
-	Name         string
-	IsGeneral    bool
-	CreatedAt    time.Time
-	DisplayOrder sql.NullInt32
-	CurrencyCode sql.NullString
-	Status       string
-	Description  string
-	BalanceCents int64
-}
-
-func (q *Queries) GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (GetBucketRow, error) {
+func (q *Queries) GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (FloatBucket, error) {
 	row := q.db.QueryRowContext(ctx, getBucket, bucketID, userID)
-	var i GetBucketRow
+	var i FloatBucket
 	err := row.Scan(
 		&i.BucketID,
 		&i.UserID,
@@ -112,7 +95,6 @@ func (q *Queries) GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid
 		&i.CurrencyCode,
 		&i.Status,
 		&i.Description,
-		&i.BalanceCents,
 	)
 	return i, err
 }
@@ -182,36 +164,20 @@ func (q *Queries) ListBucketSampleTransactions(ctx context.Context, bucketID uui
 }
 
 const listBuckets = `-- name: ListBuckets :many
-SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, b.description, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
-FROM float.buckets b
-LEFT JOIN float.bucket_ledger l ON b.bucket_id = l.bucket_id
+SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, b.description FROM float.buckets b
 WHERE b.user_id = $1 AND b.status = 'active'
-GROUP BY b.bucket_id
 ORDER BY b.display_order NULLS LAST, b.created_at ASC
 `
 
-type ListBucketsRow struct {
-	BucketID     uuid.UUID
-	UserID       uuid.UUID
-	Name         string
-	IsGeneral    bool
-	CreatedAt    time.Time
-	DisplayOrder sql.NullInt32
-	CurrencyCode sql.NullString
-	Status       string
-	Description  string
-	BalanceCents int64
-}
-
-func (q *Queries) ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBucketsRow, error) {
+func (q *Queries) ListBuckets(ctx context.Context, userID uuid.UUID) ([]FloatBucket, error) {
 	rows, err := q.db.QueryContext(ctx, listBuckets, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListBucketsRow
+	var items []FloatBucket
 	for rows.Next() {
-		var i ListBucketsRow
+		var i FloatBucket
 		if err := rows.Scan(
 			&i.BucketID,
 			&i.UserID,
@@ -222,7 +188,6 @@ func (q *Queries) ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBuck
 			&i.CurrencyCode,
 			&i.Status,
 			&i.Description,
-			&i.BalanceCents,
 		); err != nil {
 			return nil, err
 		}

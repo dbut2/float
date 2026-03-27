@@ -49,7 +49,7 @@ func (s *ClassifierService) ClassifyTransaction(ctx context.Context, userID, txI
 	}
 
 	var generalBucketID uuid.UUID
-	var nonGeneralBuckets []database.ListBucketsRow
+	var nonGeneralBuckets []database.FloatBucket
 	for _, b := range buckets {
 		if b.IsGeneral {
 			generalBucketID = b.BucketID
@@ -104,7 +104,7 @@ func (s *ClassifierService) ClassifyTransaction(ctx context.Context, userID, txI
 
 // ClassifyOne fetches a single transaction by ID and classifies it.
 func (s *ClassifierService) ClassifyOne(ctx context.Context, userID, txID uuid.UUID) error {
-	tx, err := s.q.GetTransaction(ctx, txID, userID)
+	tx, err := s.q.GetUpTransaction(ctx, txID, userID)
 	if err != nil {
 		return fmt.Errorf("get transaction: %w", err)
 	}
@@ -152,18 +152,16 @@ func (s *ClassifierService) runReclassify(userID uuid.UUID, status *ReclassifySt
 		return
 	}
 
-	txs, err := s.q.ListBucketTransactions(ctx, general.BucketID, userID)
+	txs, err := s.q.ListUpTransactionsByBucket(ctx, general.BucketID, userID)
 	if err != nil {
 		log.Printf("reclassify: list transactions: %v", err)
 		return
 	}
 
-	// Filter to actual transactions only
-	var toClassify []database.FloatBucketLedger
+	// Filter to actual transactions only (raw up_transactions are all real transactions)
+	var toClassify []database.FloatUpTransaction
 	for _, tx := range txs {
-		if tx.IsTransaction {
-			toClassify = append(toClassify, tx)
-		}
+		toClassify = append(toClassify, tx)
 	}
 
 	s.mu.Lock()
@@ -176,8 +174,8 @@ func (s *ClassifierService) runReclassify(userID uuid.UUID, status *ReclassifySt
 		if err := s.ClassifyTransaction(ctx, userID, tx.TransactionID, tx.Description, tx.AmountCents, sql.NullString{}, sql.NullString{}, tx.CreatedAt, tx.ForeignCurrencyCode); err != nil {
 			log.Printf("classify tx %s: %v", tx.TransactionID, err)
 		} else {
-			ledgerEntry, err := s.q.GetTransaction(ctx, tx.TransactionID, userID)
-			if err == nil && ledgerEntry.BucketID != beforeBucket {
+			after, err := s.q.GetUpTransaction(ctx, tx.TransactionID, userID)
+			if err == nil && after.BucketID != beforeBucket {
 				s.mu.Lock()
 				status.Reclassified++
 				s.mu.Unlock()
@@ -190,7 +188,7 @@ func (s *ClassifierService) runReclassify(userID uuid.UUID, status *ReclassifySt
 	}
 }
 
-func (s *ClassifierService) buildPrompt(ctx context.Context, buckets []database.ListBucketsRow, description string, amountCents int64, txType, categoryID sql.NullString, createdAt time.Time, foreignCurrencyCode sql.NullString) (string, error) {
+func (s *ClassifierService) buildPrompt(ctx context.Context, buckets []database.FloatBucket, description string, amountCents int64, txType, categoryID sql.NullString, createdAt time.Time, foreignCurrencyCode sql.NullString) (string, error) {
 	var sb strings.Builder
 	sb.WriteString("You are a transaction categorizer for a personal budget app.\n\n")
 	sb.WriteString("The user has these budget buckets:\n")

@@ -20,28 +20,32 @@ ON CONFLICT (transaction_id) DO UPDATE SET
     foreign_amount_cents = EXCLUDED.foreign_amount_cents
 RETURNING (xmax = 0) AS inserted;
 
--- name: GetTransaction :one
-SELECT l.* FROM float.bucket_ledger l
-JOIN float.buckets b USING (bucket_id)
-WHERE l.transaction_id = $1 AND b.user_id = $2;
-
--- name: ListTransactions :many
-SELECT l.* FROM float.bucket_ledger l
-JOIN float.buckets b USING (bucket_id)
-WHERE b.user_id = $1
-ORDER BY l.created_at DESC;
-
 -- name: AssignTransactionToBucket :exec
 UPDATE float.up_transactions
 SET bucket_id = $2
 WHERE transaction_id = $1
 AND bucket_id IN (SELECT bucket_id FROM float.buckets WHERE user_id = $3);
 
--- name: ListBucketTransactions :many
-SELECT l.* FROM float.bucket_ledger l
-JOIN float.buckets b USING (bucket_id)
-WHERE l.bucket_id = $1 AND b.user_id = $2
-ORDER BY l.created_at DESC;
-
 -- name: DeleteUpTransaction :exec
 DELETE FROM float.up_transactions WHERE transaction_id = $1;
+
+-- name: ListUpTransactionsByUser :many
+SELECT t.* FROM float.up_transactions t
+JOIN float.buckets b ON t.bucket_id = b.bucket_id
+WHERE b.user_id = $1
+  AND t.transaction_type IS DISTINCT FROM 'Transfer'
+  AND t.transaction_type IS DISTINCT FROM 'Round Up'
+ORDER BY t.created_at DESC;
+
+-- name: ListUpTransactionsByBucket :many
+SELECT t.* FROM float.up_transactions t
+JOIN float.buckets b ON t.bucket_id = b.bucket_id
+WHERE t.bucket_id = $1 AND b.user_id = $2
+  AND t.transaction_type IS DISTINCT FROM 'Transfer'
+  AND t.transaction_type IS DISTINCT FROM 'Round Up'
+ORDER BY t.created_at DESC;
+
+-- name: GetUpTransaction :one
+SELECT t.* FROM float.up_transactions t
+JOIN float.buckets b ON t.bucket_id = b.bucket_id
+WHERE t.transaction_id = $1 AND b.user_id = $2;

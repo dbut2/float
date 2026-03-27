@@ -35,57 +35,61 @@ func (q *Queries) DeleteUpTransaction(ctx context.Context, transactionID uuid.UU
 	return err
 }
 
-const getTransaction = `-- name: GetTransaction :one
-SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.foreign_currency_code, l.foreign_amount_cents, l.created_at, l.is_transaction, l.covers_transaction_id FROM float.bucket_ledger l
-JOIN float.buckets b USING (bucket_id)
-WHERE l.transaction_id = $1 AND b.user_id = $2
+const getUpTransaction = `-- name: GetUpTransaction :one
+SELECT t.transaction_id, t.bucket_id, t.description, t.message, t.amount_cents, t.created_at, t.transaction_type, t.raw_json, t.category_id, t.foreign_currency_code, t.foreign_amount_cents FROM float.up_transactions t
+JOIN float.buckets b ON t.bucket_id = b.bucket_id
+WHERE t.transaction_id = $1 AND b.user_id = $2
 `
 
-func (q *Queries) GetTransaction(ctx context.Context, transactionID uuid.UUID, userID uuid.UUID) (FloatBucketLedger, error) {
-	row := q.db.QueryRowContext(ctx, getTransaction, transactionID, userID)
-	var i FloatBucketLedger
+func (q *Queries) GetUpTransaction(ctx context.Context, transactionID uuid.UUID, userID uuid.UUID) (FloatUpTransaction, error) {
+	row := q.db.QueryRowContext(ctx, getUpTransaction, transactionID, userID)
+	var i FloatUpTransaction
 	err := row.Scan(
 		&i.TransactionID,
 		&i.BucketID,
 		&i.Description,
 		&i.Message,
 		&i.AmountCents,
+		&i.CreatedAt,
+		&i.TransactionType,
+		&i.RawJson,
+		&i.CategoryID,
 		&i.ForeignCurrencyCode,
 		&i.ForeignAmountCents,
-		&i.CreatedAt,
-		&i.IsTransaction,
-		&i.CoversTransactionID,
 	)
 	return i, err
 }
 
-const listBucketTransactions = `-- name: ListBucketTransactions :many
-SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.foreign_currency_code, l.foreign_amount_cents, l.created_at, l.is_transaction, l.covers_transaction_id FROM float.bucket_ledger l
-JOIN float.buckets b USING (bucket_id)
-WHERE l.bucket_id = $1 AND b.user_id = $2
-ORDER BY l.created_at DESC
+const listUpTransactionsByBucket = `-- name: ListUpTransactionsByBucket :many
+SELECT t.transaction_id, t.bucket_id, t.description, t.message, t.amount_cents, t.created_at, t.transaction_type, t.raw_json, t.category_id, t.foreign_currency_code, t.foreign_amount_cents FROM float.up_transactions t
+JOIN float.buckets b ON t.bucket_id = b.bucket_id
+WHERE t.bucket_id = $1 AND b.user_id = $2
+  AND t.transaction_type IS DISTINCT FROM 'Transfer'
+  AND t.transaction_type IS DISTINCT FROM 'Round Up'
+ORDER BY t.created_at DESC
 `
 
-func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) ([]FloatBucketLedger, error) {
-	rows, err := q.db.QueryContext(ctx, listBucketTransactions, bucketID, userID)
+func (q *Queries) ListUpTransactionsByBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) ([]FloatUpTransaction, error) {
+	rows, err := q.db.QueryContext(ctx, listUpTransactionsByBucket, bucketID, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []FloatBucketLedger
+	var items []FloatUpTransaction
 	for rows.Next() {
-		var i FloatBucketLedger
+		var i FloatUpTransaction
 		if err := rows.Scan(
 			&i.TransactionID,
 			&i.BucketID,
 			&i.Description,
 			&i.Message,
 			&i.AmountCents,
+			&i.CreatedAt,
+			&i.TransactionType,
+			&i.RawJson,
+			&i.CategoryID,
 			&i.ForeignCurrencyCode,
 			&i.ForeignAmountCents,
-			&i.CreatedAt,
-			&i.IsTransaction,
-			&i.CoversTransactionID,
 		); err != nil {
 			return nil, err
 		}
@@ -100,33 +104,36 @@ func (q *Queries) ListBucketTransactions(ctx context.Context, bucketID uuid.UUID
 	return items, nil
 }
 
-const listTransactions = `-- name: ListTransactions :many
-SELECT l.transaction_id, l.bucket_id, l.description, l.message, l.amount_cents, l.foreign_currency_code, l.foreign_amount_cents, l.created_at, l.is_transaction, l.covers_transaction_id FROM float.bucket_ledger l
-JOIN float.buckets b USING (bucket_id)
+const listUpTransactionsByUser = `-- name: ListUpTransactionsByUser :many
+SELECT t.transaction_id, t.bucket_id, t.description, t.message, t.amount_cents, t.created_at, t.transaction_type, t.raw_json, t.category_id, t.foreign_currency_code, t.foreign_amount_cents FROM float.up_transactions t
+JOIN float.buckets b ON t.bucket_id = b.bucket_id
 WHERE b.user_id = $1
-ORDER BY l.created_at DESC
+  AND t.transaction_type IS DISTINCT FROM 'Transfer'
+  AND t.transaction_type IS DISTINCT FROM 'Round Up'
+ORDER BY t.created_at DESC
 `
 
-func (q *Queries) ListTransactions(ctx context.Context, userID uuid.UUID) ([]FloatBucketLedger, error) {
-	rows, err := q.db.QueryContext(ctx, listTransactions, userID)
+func (q *Queries) ListUpTransactionsByUser(ctx context.Context, userID uuid.UUID) ([]FloatUpTransaction, error) {
+	rows, err := q.db.QueryContext(ctx, listUpTransactionsByUser, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []FloatBucketLedger
+	var items []FloatUpTransaction
 	for rows.Next() {
-		var i FloatBucketLedger
+		var i FloatUpTransaction
 		if err := rows.Scan(
 			&i.TransactionID,
 			&i.BucketID,
 			&i.Description,
 			&i.Message,
 			&i.AmountCents,
+			&i.CreatedAt,
+			&i.TransactionType,
+			&i.RawJson,
+			&i.CategoryID,
 			&i.ForeignCurrencyCode,
 			&i.ForeignAmountCents,
-			&i.CreatedAt,
-			&i.IsTransaction,
-			&i.CoversTransactionID,
 		); err != nil {
 			return nil, err
 		}

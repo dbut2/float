@@ -24,19 +24,6 @@ type FloatBucket struct {
 	Description  string
 }
 
-type FloatBucketLedger struct {
-	TransactionID       uuid.UUID
-	BucketID            uuid.UUID
-	Description         string
-	Message             string
-	AmountCents         int64
-	ForeignCurrencyCode sql.NullString
-	ForeignAmountCents  sql.NullInt64
-	CreatedAt           time.Time
-	IsTransaction       bool
-	CoversTransactionID uuid.NullUUID
-}
-
 type FloatBucketTransfer struct {
 	TransferID          uuid.UUID
 	FromBucketID        uuid.UUID

@@ -13,25 +13,10 @@ ON CONFLICT (user_id, name) DO UPDATE SET
     description = EXCLUDED.description
 RETURNING *;
 
--- name: ListBuckets :many
-SELECT b.*, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
-FROM float.buckets b
-LEFT JOIN float.bucket_ledger l ON b.bucket_id = l.bucket_id
-WHERE b.user_id = $1 AND b.status = 'active'
-GROUP BY b.bucket_id
-ORDER BY b.display_order NULLS LAST, b.created_at ASC;
-
 -- name: SetBucketDisplayOrder :exec
 UPDATE float.buckets
 SET display_order = $2
 WHERE bucket_id = $1 AND user_id = $3;
-
--- name: GetBucket :one
-SELECT b.*, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
-FROM float.buckets b
-LEFT JOIN float.bucket_ledger l ON b.bucket_id = l.bucket_id
-WHERE b.bucket_id = $1 AND b.user_id = $2 AND b.status = 'active'
-GROUP BY b.bucket_id;
 
 -- name: EnsureGeneralBucket :exec
 INSERT INTO float.buckets (user_id, name, is_general)
@@ -55,6 +40,15 @@ SELECT * FROM float.buckets WHERE user_id = $1 AND is_general = TRUE;
 
 -- name: UpdateBucketDescription :exec
 UPDATE float.buckets SET description = $2 WHERE bucket_id = $1 AND user_id = $3;
+
+-- name: ListBuckets :many
+SELECT b.* FROM float.buckets b
+WHERE b.user_id = $1 AND b.status = 'active'
+ORDER BY b.display_order NULLS LAST, b.created_at ASC;
+
+-- name: GetBucket :one
+SELECT b.* FROM float.buckets b
+WHERE b.bucket_id = $1 AND b.user_id = $2 AND b.status = 'active';
 
 -- name: ListBucketSampleTransactions :many
 SELECT DISTINCT ON (t.description) t.description, t.amount_cents, t.category_id, t.foreign_currency_code

@@ -31,12 +31,13 @@ type Bucket struct {
 
 type BucketService struct {
 	q      database.Querier
+	ledger *LedgerService
 	fx     *FXService
 	covers *CoverService
 }
 
-func NewBucketService(q database.Querier, fx *FXService, covers *CoverService) *BucketService {
-	return &BucketService{q: q, fx: fx, covers: covers}
+func NewBucketService(q database.Querier, ledger *LedgerService, fx *FXService, covers *CoverService) *BucketService {
+	return &BucketService{q: q, ledger: ledger, fx: fx, covers: covers}
 }
 
 func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bucket, error) {
@@ -44,6 +45,13 @@ func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bu
 	if err != nil {
 		return nil, err
 	}
+
+	entries, _ := s.ledger.ForUser(ctx, userID)
+	balanceByBucket := make(map[uuid.UUID]int64, len(rows))
+	for _, e := range entries {
+		balanceByBucket[e.BucketID] += e.AmountCents
+	}
+
 	buckets := make([]Bucket, len(rows))
 	for i, r := range rows {
 		var displayOrder *int
@@ -62,7 +70,7 @@ func (s *BucketService) ListBuckets(ctx context.Context, userID uuid.UUID) ([]Bu
 			Description:  r.Description,
 			IsGeneral:    r.IsGeneral,
 			CreatedAt:    r.CreatedAt,
-			BalanceCents: r.BalanceCents,
+			BalanceCents: balanceByBucket[r.BucketID],
 			DisplayOrder: displayOrder,
 			CurrencyCode: currencyCode,
 		}
@@ -135,6 +143,10 @@ func (s *BucketService) GetBucket(ctx context.Context, bucketID, userID uuid.UUI
 	if err != nil {
 		return Bucket{}, err
 	}
+
+	entries, _ := s.ledger.ForBucket(ctx, bucketID, userID)
+	balanceCents := sumLedgerBalance(entries)
+
 	bucket := Bucket{
 		BucketID:     b.BucketID,
 		UserID:       b.UserID,
@@ -142,7 +154,7 @@ func (s *BucketService) GetBucket(ctx context.Context, bucketID, userID uuid.UUI
 		Description:  b.Description,
 		IsGeneral:    b.IsGeneral,
 		CreatedAt:    b.CreatedAt,
-		BalanceCents: b.BalanceCents,
+		BalanceCents: balanceCents,
 	}
 	if b.CurrencyCode.Valid {
 		bucket.CurrencyCode = &b.CurrencyCode.String
@@ -251,7 +263,7 @@ func (b *Bucket) setDisplays() {
 }
 
 func (s *BucketService) ListBucketTransactions(ctx context.Context, bucketID, userID uuid.UUID) ([]Transaction, error) {
-	rows, err := s.q.ListBucketTransactions(ctx, bucketID, userID)
+	rows, err := s.ledger.ForBucket(ctx, bucketID, userID)
 	if err != nil {
 		return nil, err
 	}

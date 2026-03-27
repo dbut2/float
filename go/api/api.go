@@ -80,10 +80,11 @@ type API struct {
 func New(q database.Querier, fx *frankfurter.FXClient, classifier *service.ClassifierService, push *service.PushService) *API {
 	fxSvc := service.NewFXService(q, fx)
 	coverSvc := service.NewCoverService(q)
+	ledgerSvc := service.NewLedgerService(q)
 	return &API{
 		users:        service.NewUserService(q, classifier),
-		buckets:      service.NewBucketService(q, fxSvc, coverSvc),
-		transactions: service.NewTransactionService(q),
+		buckets:      service.NewBucketService(q, ledgerSvc, fxSvc, coverSvc),
+		transactions: service.NewTransactionService(q, ledgerSvc),
 		transfers:    service.NewTransferService(q),
 		covers:       coverSvc,
 		push:         push,

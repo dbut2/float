@@ -26,3 +26,22 @@ ORDER BY t.created_at DESC;
 DELETE FROM float.bucket_transfers t
 USING float.buckets b
 WHERE t.transfer_id = $1 AND t.from_bucket_id = b.bucket_id AND b.user_id = $2;
+
+-- name: ListTransfersByBucket :many
+SELECT
+    t.transfer_id,
+    t.from_bucket_id,
+    fb.name AS from_bucket_name,
+    t.to_bucket_id,
+    tb.name AS to_bucket_name,
+    t.amount_cents,
+    t.note,
+    t.created_at,
+    t.covers_transaction_id,
+    tx.description AS covered_tx_description
+FROM float.bucket_transfers t
+JOIN float.buckets fb ON t.from_bucket_id = fb.bucket_id
+JOIN float.buckets tb ON t.to_bucket_id = tb.bucket_id
+LEFT JOIN float.up_transactions tx ON t.covers_transaction_id = tx.transaction_id
+WHERE t.from_bucket_id = $1 OR t.to_bucket_id = $1
+ORDER BY t.created_at DESC;

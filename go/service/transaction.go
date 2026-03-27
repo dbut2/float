@@ -35,19 +35,20 @@ type Transaction struct {
 }
 
 type TransactionService struct {
-	q database.Querier
+	q      database.Querier
+	ledger *LedgerService
 }
 
-func NewTransactionService(q database.Querier) *TransactionService {
-	return &TransactionService{q: q}
+func NewTransactionService(q database.Querier, ledger *LedgerService) *TransactionService {
+	return &TransactionService{q: q, ledger: ledger}
 }
 
 func (s *TransactionService) ListTransactions(ctx context.Context, userID uuid.UUID) ([]Transaction, error) {
-	rows, err := s.q.ListTransactions(ctx, userID)
+	entries, err := s.ledger.ForUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	return toTransactions(rows), nil
+	return toTransactions(entries), nil
 }
 
 func (s *TransactionService) AssignToBucket(ctx context.Context, transactionID, bucketID, userID uuid.UUID) error {
@@ -85,7 +86,7 @@ func (s *TransactionService) CreateTransaction(ctx context.Context, tx Transacti
 	return tx, nil
 }
 
-func toTransactions(rows []database.FloatBucketLedger) []Transaction {
+func toTransactions(rows []ledgerEntry) []Transaction {
 	txs := make([]Transaction, len(rows))
 	for i, r := range rows {
 		txs[i] = Transaction{

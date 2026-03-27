@@ -25,12 +25,12 @@ type Querier interface {
 	DeleteUpTransaction(ctx context.Context, transactionID uuid.UUID) error
 	EnsureGeneralBucket(ctx context.Context, userID uuid.UUID) error
 	GetActiveTrickleByToBucketID(ctx context.Context, toBucketID uuid.UUID, userID uuid.UUID) (GetActiveTrickleByToBucketIDRow, error)
-	GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (GetBucketRow, error)
+	GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (FloatBucket, error)
 	GetFXRate(ctx context.Context, baseCurrency string, quoteCurrency string, column3 time.Time) (float64, error)
 	GetGeneralBucket(ctx context.Context, userID uuid.UUID) (FloatBucket, error)
-	GetTransaction(ctx context.Context, transactionID uuid.UUID, userID uuid.UUID) (FloatBucketLedger, error)
 	GetTransactionOwner(ctx context.Context, transactionID uuid.UUID, userID uuid.UUID) (GetTransactionOwnerRow, error)
 	GetTricklesByBucketID(ctx context.Context, toBucketID uuid.UUID) ([]GetTricklesByBucketIDRow, error)
+	GetUpTransaction(ctx context.Context, transactionID uuid.UUID, userID uuid.UUID) (FloatUpTransaction, error)
 	GetUserByEmail(ctx context.Context, email string) (FloatUser, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (FloatUser, error)
 	GetUserFCMTokens(ctx context.Context, userID uuid.UUID) ([]string, error)
@@ -39,13 +39,14 @@ type Querier interface {
 	InsertClassificationLog(ctx context.Context, arg InsertClassificationLogParams) error
 	InsertTrickle(ctx context.Context, arg InsertTrickleParams) (FloatBucketTrickle, error)
 	ListBucketSampleTransactions(ctx context.Context, bucketID uuid.UUID) ([]ListBucketSampleTransactionsRow, error)
-	ListBucketTransactions(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) ([]FloatBucketLedger, error)
-	ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBucketsRow, error)
+	ListBuckets(ctx context.Context, userID uuid.UUID) ([]FloatBucket, error)
 	ListCoversByBucket(ctx context.Context, bucketID uuid.UUID) ([]ListCoversByBucketRow, error)
 	ListCoversByTransaction(ctx context.Context, coversTransactionID uuid.NullUUID) ([]ListCoversByTransactionRow, error)
-	ListTransactions(ctx context.Context, userID uuid.UUID) ([]FloatBucketLedger, error)
 	ListTransfers(ctx context.Context, userID uuid.UUID) ([]ListTransfersRow, error)
+	ListTransfersByBucket(ctx context.Context, fromBucketID uuid.UUID) ([]ListTransfersByBucketRow, error)
 	ListTrickles(ctx context.Context, userID uuid.UUID) ([]ListTricklesRow, error)
+	ListUpTransactionsByBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) ([]FloatUpTransaction, error)
+	ListUpTransactionsByUser(ctx context.Context, userID uuid.UUID) ([]FloatUpTransaction, error)
 	ReassignBucketTransactionsToGeneral(ctx context.Context, bucketID uuid.UUID) error
 	RegisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error
 	SeedBucket(ctx context.Context, arg SeedBucketParams) (FloatBucket, error)
