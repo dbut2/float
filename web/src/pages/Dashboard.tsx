@@ -19,6 +19,7 @@ const COMMON_CURRENCIES = [
   { code: 'HKD', name: 'Hong Kong Dollar' },
   { code: 'KRW', name: 'South Korean Won' },
   { code: 'VND', name: 'Vietnamese Dong' },
+  { code: 'CHF', name: 'Swiss Franc' },
 ]
 
 function BucketCard({
