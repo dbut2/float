@@ -6,7 +6,7 @@ services:
     environment:
       - DATABASE_DSN=postgres://float:float@db:5432/float?sslmode=disable
       - BASE_URL=https://afloat.dbut.dev
-      - OLLAMA_URL=${OLLAMA_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS}
       - VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY}
       - VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN}

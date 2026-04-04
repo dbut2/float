@@ -55,11 +55,14 @@ func setup(r *gin.Engine) (*api.API, gin.HandlerFunc) {
 	fx := frankfurter.NewFXClient()
 
 	var classifier *service.ClassifierService
-	if ollamaURL := os.Getenv("OLLAMA_URL"); ollamaURL != "" {
-		ollamaClient := service.NewOllamaClient(ollamaURL, "qwen3.5:9b")
-		classifier = service.NewClassifierService(queries, ollamaClient)
+	if apiKey := os.Getenv("OPENAI_API_KEY"); apiKey != "" {
+		model := os.Getenv("OPENAI_MODEL")
+		if model == "" {
+			model = "gpt-5.4-mini"
+		}
+		classifier = service.NewClassifierService(queries, service.NewOpenAIClient(apiKey, model))
 	} else {
-		log.Println("OLLAMA_URL not set, classification disabled")
+		log.Println("OPENAI_API_KEY not set, classification disabled")
 	}
 
 	push := service.NewPushService(queries, newFCMClient())
