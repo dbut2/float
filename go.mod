@@ -9,6 +9,7 @@ require (
 	github.com/lib/pq v1.12.1
 	github.com/oapi-codegen/runtime v1.3.1
 	github.com/ollama/ollama v0.19.0
+	github.com/openai/openai-go v1.12.0
 	github.com/pressly/goose/v3 v3.27.0
 	golang.org/x/text v0.35.0
 	golang.org/x/time v0.15.0
@@ -124,7 +125,6 @@ require (
 	github.com/oapi-codegen/oapi-codegen/v2 v2.6.0 // indirect
 	github.com/oasdiff/yaml v0.0.0-20250309154309-f31be36b4037 // indirect
 	github.com/oasdiff/yaml3 v0.0.0-20250309153720-d2182401db90 // indirect
-	github.com/openai/openai-go v1.12.0 // indirect
 	github.com/pb33f/doctor v0.0.48 // indirect
 	github.com/pb33f/jsonpath v0.8.1 // indirect
 	github.com/pb33f/libopenapi v0.34.0 // indirect
