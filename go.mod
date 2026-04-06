@@ -6,14 +6,14 @@ require (
 	firebase.google.com/go/v4 v4.19.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/google/uuid v1.6.0
-	github.com/lib/pq v1.12.1
+	github.com/lib/pq v1.12.3
 	github.com/oapi-codegen/runtime v1.3.1
-	github.com/ollama/ollama v0.19.0
+	github.com/ollama/ollama v0.20.2
 	github.com/openai/openai-go v1.12.0
 	github.com/pressly/goose/v3 v3.27.0
 	golang.org/x/text v0.35.0
 	golang.org/x/time v0.15.0
-	google.golang.org/api v0.273.0
+	google.golang.org/api v0.274.0
 )
 
 require (
