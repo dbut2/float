@@ -145,6 +145,14 @@ export default function Dashboard() {
     queryFn: api.getTransactBalance,
   })
 
+  const { data: me } = useQuery({ queryKey: ['user'], queryFn: api.getUser })
+
+  useEffect(() => {
+    if (me && !me.has_token) {
+      navigate('/onboarding', { replace: true })
+    }
+  }, [me, navigate])
+
   useEffect(() => {
     setOrderedBuckets(buckets)
   }, [buckets])

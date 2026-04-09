@@ -18,6 +18,7 @@ type User struct {
 	UserID    uuid.UUID `json:"user_id"`
 	Email     string    `json:"email"`
 	CreatedAt time.Time `json:"created_at"`
+	HasToken  bool      `json:"has_token"`
 }
 
 type UserService struct {
@@ -37,7 +38,12 @@ func (s *UserService) GetUser(ctx context.Context, userID uuid.UUID) (User, erro
 	if err != nil {
 		return User{}, err
 	}
-	return User{UserID: u.UserID, Email: u.Email, CreatedAt: u.CreatedAt}, nil
+	return User{
+		UserID:    u.UserID,
+		Email:     u.Email,
+		CreatedAt: u.CreatedAt,
+		HasToken:  u.UpToken.Valid && u.UpToken.String != "",
+	}, nil
 }
 
 func (s *UserService) UpdateToken(ctx context.Context, userID uuid.UUID, token string) error {

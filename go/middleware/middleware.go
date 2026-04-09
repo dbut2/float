@@ -14,7 +14,7 @@ import (
 	"dbut.dev/float/go/service"
 )
 
-func Middleware(queries database.Querier, baseURL string) gin.HandlerFunc {
+func Middleware(queries database.Querier, baseURL string, verifier *CloudflareAccessVerifier) gin.HandlerFunc {
 	webhookSvc := service.NewWebhookService(queries, nil, nil)
 
 	var emailToUserID sync.Map
@@ -22,9 +22,15 @@ func Middleware(queries database.Querier, baseURL string) gin.HandlerFunc {
 	var webhookConfirmed sync.Map
 
 	return func(c *gin.Context) {
-		email := c.GetHeader("Cf-Access-Authenticated-User-Email")
+		token := c.GetHeader("Cf-Access-Jwt-Assertion")
+		if token == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
 
-		if email == "" {
+		email, err := verifier.Verify(token)
+		if err != nil {
+			log.Printf("cf access: jwt verification failed: %v", err)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}
