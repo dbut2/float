@@ -6,6 +6,8 @@ services:
     environment:
       - DATABASE_DSN=postgres://float:float@db:5432/float?sslmode=disable
       - BASE_URL=https://afloat.dbut.dev
+      - CF_ACCESS_TEAM_DOMAIN=${CF_ACCESS_TEAM_DOMAIN}
+      - CF_ACCESS_AUD=${CF_ACCESS_AUD}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS}
       - VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY}
