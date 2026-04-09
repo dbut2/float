@@ -24,6 +24,12 @@ type FloatBucket struct {
 	Description  string
 }
 
+type FloatBucketHealthNotification struct {
+	BucketID   uuid.UUID
+	UserID     uuid.UUID
+	NotifiedAt time.Time
+}
+
 type FloatBucketLedger struct {
 	TransactionID       uuid.UUID
 	BucketID            uuid.UUID
