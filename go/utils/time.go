@@ -18,9 +18,11 @@ func Now() time.Time {
 }
 
 func Today() time.Time {
-	return Now().Truncate(24 * time.Hour)
+	n := Now()
+	return time.Date(n.Year(), n.Month(), n.Day(), 0, 0, 0, 0, Location)
 }
 
 func ToDate(t time.Time) time.Time {
-	return t.In(Location).Truncate(24 * time.Hour)
+	l := t.In(Location)
+	return time.Date(l.Year(), l.Month(), l.Day(), 0, 0, 0, 0, Location)
 }

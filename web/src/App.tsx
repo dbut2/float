@@ -4,11 +4,13 @@ import Dashboard from './pages/Dashboard'
 import BucketDetail from './pages/BucketDetail'
 import Settings from './pages/Settings'
 import Rules from './pages/Rules'
+import Onboarding from './pages/Onboarding'
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="onboarding" element={<Onboarding />} />
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="buckets/:id" element={<BucketDetail />} />

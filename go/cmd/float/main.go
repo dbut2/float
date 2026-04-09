@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"strings"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
@@ -78,7 +79,23 @@ func setup(r *gin.Engine) (*api.API, gin.HandlerFunc) {
 
 	webhook.New(queries, classifier, push).Register(r.Group("/webhook"))
 
-	return api.New(queries, fx, classifier, push), middleware.Middleware(queries, os.Getenv("BASE_URL"))
+	teamDomain := os.Getenv("CF_ACCESS_TEAM_DOMAIN")
+	audRaw := os.Getenv("CF_ACCESS_AUD")
+	if teamDomain == "" || audRaw == "" {
+		log.Fatalf("CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD must be set")
+	}
+	var audiences []string
+	for _, a := range strings.Split(audRaw, ",") {
+		if a = strings.TrimSpace(a); a != "" {
+			audiences = append(audiences, a)
+		}
+	}
+	verifier, err := middleware.NewCloudflareAccessVerifier(teamDomain, audiences)
+	if err != nil {
+		log.Fatalf("failed to init cf access verifier: %v", err)
+	}
+
+	return api.New(queries, fx, classifier, push), middleware.Middleware(queries, os.Getenv("BASE_URL"), verifier)
 }
 
 func newFCMClient() *messaging.Client {
