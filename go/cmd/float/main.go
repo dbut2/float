@@ -74,6 +74,9 @@ func setup(r *gin.Engine) (*api.API, gin.HandlerFunc) {
 		if err != nil {
 			log.Fatalf("failed to seed demo data: %v", err)
 		}
+		if err := queries.SetUserToken(context.Background(), userID, sql.NullString{String: "demo:token", Valid: true}); err != nil {
+			log.Fatalf("failed to set demo user token: %v", err)
+		}
 		return api.New(queries, fx, classifier, push), middleware.DemoAuth(userID)
 	}
 
