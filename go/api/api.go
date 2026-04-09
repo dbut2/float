@@ -75,6 +75,7 @@ type API struct {
 	push         PushService
 	trickles     TrickleService
 	classifier   ClassifierServiceInterface
+	health       HealthServiceInterface
 }
 
 func New(q database.Querier, fx *frankfurter.FXClient, classifier *service.ClassifierService, push *service.PushService) *API {
@@ -89,6 +90,7 @@ func New(q database.Querier, fx *frankfurter.FXClient, classifier *service.Class
 		push:         push,
 		trickles:     service.NewTrickleService(q),
 		classifier:   classifier,
+		health:       service.NewHealthService(q, push),
 	}
 }
 
@@ -135,4 +137,7 @@ func (a *API) Register(r *gin.RouterGroup) {
 
 	r.POST("/fcm-tokens", a.registerFCMToken)
 	r.DELETE("/fcm-tokens", a.unregisterFCMToken)
+
+	r.GET("/health", a.getHealth)
+	r.PUT("/buckets/:bucketID/trickle/apply-suggestion", a.applyTrickleSuggestion)
 }

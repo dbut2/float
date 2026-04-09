@@ -1,10 +1,19 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
-import { House, Sparkles, Settings2 } from 'lucide-react'
+import { House, Settings2 } from 'lucide-react'
 import { useMediaQuery } from '../hooks/useMediaQuery'
+
+// ECG / heart-pulse icon drawn as an inline SVG component.
+function HeartPulseIcon({ size = 22, color = 'currentColor', strokeWidth = 1.75 }: { size?: number; color?: string; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+  )
+}
 
 const navItems = [
   { to: '/', label: 'Home', Icon: House, exact: true },
-  { to: '/rules', label: 'Classify', Icon: Sparkles, exact: true },
+  { to: '/health', label: 'Health', Icon: HeartPulseIcon, exact: true },
   { to: '/settings', label: 'Settings', Icon: Settings2, exact: false },
 ]
 

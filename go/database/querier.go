@@ -26,6 +26,7 @@ type Querier interface {
 	EnsureGeneralBucket(ctx context.Context, userID uuid.UUID) error
 	GetActiveTrickleByToBucketID(ctx context.Context, toBucketID uuid.UUID, userID uuid.UUID) (GetActiveTrickleByToBucketIDRow, error)
 	GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (GetBucketRow, error)
+	GetBucketHealthNotification(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (time.Time, error)
 	GetFXRate(ctx context.Context, baseCurrency string, quoteCurrency string, column3 time.Time) (float64, error)
 	GetGeneralBucket(ctx context.Context, userID uuid.UUID) (FloatBucket, error)
 	GetTransaction(ctx context.Context, transactionID uuid.UUID, userID uuid.UUID) (FloatBucketLedger, error)
@@ -56,6 +57,7 @@ type Querier interface {
 	SetUserWebhookSecret(ctx context.Context, userID uuid.UUID, webhookSecret sql.NullString) error
 	UnregisterFCMToken(ctx context.Context, userID uuid.UUID, fcmToken string) error
 	UpdateBucketDescription(ctx context.Context, bucketID uuid.UUID, description string, userID uuid.UUID) error
+	UpsertBucketHealthNotification(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) error
 	UpsertFXRate(ctx context.Context, arg UpsertFXRateParams) error
 	UpsertUpTransaction(ctx context.Context, arg UpsertUpTransactionParams) (bool, error)
 	UpsertUser(ctx context.Context, email string) (FloatUser, error)

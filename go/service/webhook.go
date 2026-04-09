@@ -18,10 +18,11 @@ type WebhookService struct {
 	q          database.Querier
 	classifier *ClassifierService
 	push       *PushService
+	health     *HealthService
 }
 
 func NewWebhookService(q database.Querier, classifier *ClassifierService, push *PushService) *WebhookService {
-	return &WebhookService{q: q, classifier: classifier, push: push}
+	return &WebhookService{q: q, classifier: classifier, push: push, health: NewHealthService(q, push)}
 }
 
 func (s *WebhookService) EnsureWebhook(ctx context.Context, userID uuid.UUID, baseURL string) (bool, error) {
@@ -139,10 +140,19 @@ func (s *WebhookService) ProcessEvent(ctx context.Context, userID uuid.UUID, pay
 		if shouldClassify && s.classifier != nil {
 			log.Printf("webhook: queuing classification for tx %s (inserted=%v, event=%s)", params.TransactionID, inserted, eventType)
 			go func() {
-				if err := s.classifier.ClassifyTransaction(context.Background(), userID, params.TransactionID, params.Description, params.AmountCents, params.TransactionType, params.CategoryID, params.CreatedAt, params.ForeignCurrencyCode); err != nil {
+				bgCtx := context.Background()
+				if err := s.classifier.ClassifyTransaction(bgCtx, userID, params.TransactionID, params.Description, params.AmountCents, params.TransactionType, params.CategoryID, params.CreatedAt, params.ForeignCurrencyCode); err != nil {
 					log.Printf("classify tx %s: %v", params.TransactionID, err)
-				} else {
-					log.Printf("classify tx %s: done", params.TransactionID)
+					return
+				}
+				log.Printf("classify tx %s: done", params.TransactionID)
+				// After classification, check if the assigned bucket is now critical
+				// and send a health push notification if needed (once per day max).
+				if s.health != nil {
+					txRow, err := s.q.GetTransaction(bgCtx, params.TransactionID, userID)
+					if err == nil {
+						s.health.CheckAndNotify(bgCtx, userID, txRow.BucketID)
+					}
 				}
 			}()
 		}
