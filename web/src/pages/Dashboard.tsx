@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, GripVertical, Plus } from 'lucide-react'
-import { type Bucket, api } from '../lib/api'
+import { type Bucket, type BucketHealth, api } from '../lib/api'
 import { useDraggableSheet } from '../hooks/useDraggableSheet'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 
@@ -22,25 +22,66 @@ const COMMON_CURRENCIES = [
   { code: 'CHF', name: 'Swiss Franc' },
 ]
 
+const healthProgressColor: Record<string, string> = {
+  great: 'var(--green)',
+  ok: 'var(--yellow)',
+  warn: '#fb923c',
+  critical: 'var(--red)',
+  stale: 'var(--text-3)',
+}
+
+const allowanceColor: Record<string, string> = {
+  great: 'var(--green)',
+  ok: 'var(--yellow)',
+  warn: '#fb923c',
+  critical: 'var(--red)',
+  stale: 'var(--text-3)',
+}
+
 function BucketCard({
   bucket,
+  health,
   onClick,
   dragHandle,
   isDragging,
 }: {
   bucket: Bucket
+  health?: BucketHealth
   onClick: () => void
   dragHandle?: React.ReactNode
   isDragging?: boolean
 }) {
   const isTravel = !!bucket.currency_code && !!bucket.foreign_balance_display
   const isNeg = bucket.balance_display.startsWith("-")
+  const status = health?.status ?? 'stale'
+  const healthClass = health && !bucket.is_general ? `health-${status}` : ''
+
+  const allowanceLabel = () => {
+    if (!health || !health.has_trickle) return null
+    const prefix = (health.status === 'warn' || health.status === 'critical' || health.is_at_risk)
+      ? 'Recovery'
+      : 'Budget'
+    const amount = `$${Math.abs(health.daily_allowance).toFixed(2)}/day`
+    return `${prefix}: ${amount}`
+  }
+
+  const trickleSubtitle = () => {
+    if (!health || !health.has_trickle) return null
+    if (health.days_until_trickle <= 0) return 'Trickle due today'
+    const dollars = `$${(health.trickle_amount).toFixed(0)}`
+    return `Trickle refills ${dollars} in ${health.days_until_trickle}d`
+  }
+
+  const pillLabel = allowanceLabel()
+  const subtitle = trickleSubtitle()
+  const progressColor = healthProgressColor[status] ?? 'var(--text-3)'
+  const pillColor = allowanceColor[status] ?? 'var(--text-3)'
 
   return (
     <div
+      className={healthClass}
       style={{
         width: '100%',
-        background: 'var(--surface)',
         border: '1px solid var(--border)',
         borderRadius: 20,
         padding: '22px 24px',
@@ -50,6 +91,8 @@ function BucketCard({
         marginBottom: 12,
         opacity: isDragging ? 0.5 : 1,
         transition: 'opacity 0.1s',
+        overflow: 'hidden',
+        position: 'relative',
       }}
     >
       {dragHandle}
@@ -68,7 +111,7 @@ function BucketCard({
           justifyContent: 'space-between',
         }}
       >
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <p
               style={{
@@ -95,6 +138,25 @@ function BucketCard({
                 {bucket.currency_code}
               </span>
             )}
+            {health?.status === 'stale' && !bucket.is_general && (
+              <span style={{
+                fontFamily: 'Syne', fontWeight: 700, fontSize: 10,
+                letterSpacing: '0.06em', color: 'var(--text-3)',
+                background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '2px 6px',
+              }}>
+                NO TRICKLE
+              </span>
+            )}
+            {pillLabel && (
+              <span style={{
+                fontFamily: 'DM Sans', fontWeight: 500, fontSize: 11,
+                color: pillColor,
+                background: 'rgba(0,0,0,0.25)', borderRadius: 6, padding: '2px 7px',
+                whiteSpace: 'nowrap',
+              }}>
+                {pillLabel}
+              </span>
+            )}
           </div>
           {isTravel ? (
             <>
@@ -116,8 +178,31 @@ function BucketCard({
               {bucket.balance_display}
             </p>
           )}
+          {subtitle && (
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5 }}>
+              {subtitle}
+            </p>
+          )}
+          {/* Progress bar — spend fill */}
+          {health && health.has_trickle && (
+            <div style={{
+              marginTop: 10,
+              height: 4,
+              borderRadius: 2,
+              background: 'rgba(255,255,255,0.07)',
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${Math.min(health.spent_pct * 100, 100)}%`,
+                background: progressColor,
+                borderRadius: 2,
+                transition: 'width 0.3s ease',
+              }} />
+            </div>
+          )}
         </div>
-        <ChevronRight size={20} color="var(--text-3)" strokeWidth={1.75} style={{ flexShrink: 0 }} />
+        <ChevronRight size={20} color="var(--text-3)" strokeWidth={1.75} style={{ flexShrink: 0, marginLeft: 12 }} />
       </button>
     </div>
   )
@@ -139,6 +224,17 @@ export default function Dashboard() {
     queryKey: ['buckets'],
     queryFn: api.getBuckets,
   })
+
+  const { data: healthSummary } = useQuery({
+    queryKey: ['health'],
+    queryFn: api.getHealth,
+    staleTime: 30_000,
+  })
+
+  const healthByBucket = (healthSummary?.buckets ?? []).reduce<Record<string, BucketHealth>>(
+    (acc, bh) => { acc[bh.bucket_id] = bh; return acc },
+    {},
+  )
 
   const { data: transactBalance } = useQuery({
     queryKey: ['transact-balance'],
@@ -251,6 +347,7 @@ export default function Dashboard() {
               <BucketCard
                 key={bucket.bucket_id}
                 bucket={bucket}
+                health={healthByBucket[bucket.bucket_id]}
                 onClick={() => navigate(`/buckets/${bucket.bucket_id}`)}
                 isDragging={draggingIndex === index}
                 dragHandle={

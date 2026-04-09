@@ -134,3 +134,26 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
+
+/* Health status card styles */
+.health-great {
+  background: linear-gradient(135deg, #1a2e1a, #161616);
+  border-color: rgba(74, 222, 128, 0.18);
+}
+.health-ok {
+  background: linear-gradient(135deg, #2a2510, #161616);
+  border-color: rgba(252, 211, 77, 0.18);
+}
+.health-warn {
+  background: linear-gradient(135deg, #2e1a10, #161616);
+  border-color: rgba(251, 146, 60, 0.2);
+}
+.health-critical {
+  background: linear-gradient(135deg, #2e1010, #161616);
+  border-color: rgba(248, 113, 113, 0.22);
+}
+.health-stale {
+  background: var(--surface);
+  border-color: var(--border);
+  opacity: 0.75;
+}

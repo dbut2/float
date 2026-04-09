@@ -79,6 +79,31 @@ export interface Trickle {
   created_at: string
 }
 
+export interface BucketHealth {
+  bucket_id: string
+  bucket_name: string
+  balance: number
+  balance_cents: number
+  trickle_amount: number
+  trickle_amount_cents: number
+  spent_pct: number
+  daily_allowance: number
+  days_until_trickle: number
+  next_trickle_at: string | null
+  is_at_risk: boolean
+  status: 'great' | 'ok' | 'warn' | 'critical' | 'stale'
+  has_trickle: boolean
+  period: string | null
+}
+
+export interface HealthSummary {
+  buckets: BucketHealth[]
+  overall_score: number
+  at_risk_count: number
+  stale_count: number
+  healthy_count: number
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { 'Content-Type': 'application/json', ...init?.headers },
@@ -176,6 +201,14 @@ export const api = {
 
   deleteCover: (coverId: string) =>
     request<void>(`/api/covers/${coverId}`, { method: 'DELETE' }),
+
+  getHealth: () => request<HealthSummary>('/api/health'),
+
+  applyTrickleSuggestion: (bucketId: string, amountCents: number, period: string) =>
+    request<Trickle>(`/api/buckets/${bucketId}/trickle/apply-suggestion`, {
+      method: 'PUT',
+      body: JSON.stringify({ amount_cents: amountCents, period }),
+    }),
 
   reclassify: () =>
     request<{ status: string }>('/api/classify/reclassify', { method: 'POST' }),

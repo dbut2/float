@@ -103,6 +103,25 @@ export default function BucketDetail() {
     enabled: !!bucketId,
   })
 
+  const { data: healthSummary } = useQuery({
+    queryKey: ['health'],
+    queryFn: api.getHealth,
+    staleTime: 30_000,
+  })
+  const bucketHealth = healthSummary?.buckets?.find((b) => b.bucket_id === bucketId) ?? null
+
+  const notifKey = `health-notify-${bucketId}`
+  const [notifEnabled, setNotifEnabled] = useState<boolean>(() => {
+    try { return localStorage.getItem(notifKey) !== 'false' } catch { return true }
+  })
+  const toggleNotif = () => {
+    setNotifEnabled((v) => {
+      const next = !v
+      try { localStorage.setItem(notifKey, String(next)) } catch { /* noop */ }
+      return next
+    })
+  }
+
   // Transfers relevant to this bucket
   const bucketTransfers = allTransfers.filter((t) =>
     t.from_bucket_id === bucketId || t.to_bucket_id === bucketId,
@@ -309,6 +328,73 @@ export default function BucketDetail() {
             {bucket?.name ?? '…'}
           </h1>
         </div>
+
+        {/* Health banner */}
+        {bucketHealth && bucketHealth.has_trickle && !bucket?.is_general && (() => {
+          const STATUS_COLOR: Record<string, string> = {
+            great: 'var(--green)', ok: 'var(--yellow)', warn: '#fb923c', critical: 'var(--red)', stale: 'var(--text-3)',
+          }
+          const color = STATUS_COLOR[bucketHealth.status] ?? 'var(--text-3)'
+          const prefix = (bucketHealth.status === 'warn' || bucketHealth.status === 'critical' || bucketHealth.is_at_risk) ? 'Recovery' : 'Budget'
+          const allowanceLabel = `${prefix}: $${Math.abs(bucketHealth.daily_allowance).toFixed(2)}/day`
+          return (
+            <div style={{
+              background: 'var(--surface)', borderRadius: 16, padding: '14px 16px',
+              marginBottom: 12, border: `1px solid ${color}33`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div>
+                  <span style={{
+                    fontFamily: 'Syne', fontWeight: 700, fontSize: 11, letterSpacing: '0.06em',
+                    color, background: `${color}22`, borderRadius: 6, padding: '2px 8px', textTransform: 'uppercase',
+                  }}>
+                    {bucketHealth.status}
+                  </span>
+                  <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: 'var(--text-2)', marginLeft: 10 }}>
+                    {allowanceLabel}
+                  </span>
+                  {bucketHealth.days_until_trickle > 0 && (
+                    <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: 'var(--text-3)', marginLeft: 8 }}>
+                      · {bucketHealth.days_until_trickle}d until trickle
+                    </span>
+                  )}
+                </div>
+                {/* Notification toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <span style={{ fontFamily: 'Syne', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-3)' }}>Alerts</span>
+                  <div
+                    onClick={toggleNotif}
+                    title={notifEnabled ? 'Notifications on' : 'Notifications off'}
+                    style={{
+                      width: 36, height: 20, borderRadius: 10, cursor: 'pointer',
+                      background: notifEnabled ? color : 'var(--border)',
+                      position: 'relative', transition: 'background 0.2s',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div style={{
+                      width: 14, height: 14, borderRadius: '50%',
+                      background: notifEnabled ? '#000' : 'var(--text-3)',
+                      position: 'absolute', top: 3,
+                      left: notifEnabled ? 19 : 3,
+                      transition: 'left 0.2s, background 0.2s',
+                    }} />
+                  </div>
+                </div>
+              </div>
+              {/* Spend progress bar */}
+              <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(bucketHealth.spent_pct * 100, 100)}%`,
+                  background: color,
+                  borderRadius: 2,
+                  transition: 'width 0.3s ease',
+                }} />
+              </div>
+            </div>
+          )
+        })()}
 
         {!bucket?.is_general && (
           <div

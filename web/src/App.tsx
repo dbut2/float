@@ -5,6 +5,7 @@ import BucketDetail from './pages/BucketDetail'
 import Settings from './pages/Settings'
 import Rules from './pages/Rules'
 import Onboarding from './pages/Onboarding'
+import Health from './pages/Health'
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="buckets/:id" element={<BucketDetail />} />
+          <Route path="health" element={<Health />} />
           <Route path="rules" element={<Rules />} />
           <Route path="settings" element={<Settings />} />
         </Route>

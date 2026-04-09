@@ -13,6 +13,8 @@ import (
 )
 
 type Querier interface {
+	GetBucketHealthNotification(ctx context.Context, bucketID, userID uuid.UUID) (time.Time, error)
+	UpsertBucketHealthNotification(ctx context.Context, bucketID, userID uuid.UUID) error
 	AssignTransactionToBucket(ctx context.Context, transactionID uuid.UUID, bucketID uuid.UUID, userID uuid.UUID) error
 	CloseBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) error
 	CreateBucket(ctx context.Context, arg CreateBucketParams) (FloatBucket, error)
