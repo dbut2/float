@@ -25,7 +25,7 @@ func (q *Queries) CloseBucket(ctx context.Context, bucketID uuid.UUID, userID uu
 const createBucket = `-- name: CreateBucket :one
 INSERT INTO float.buckets (user_id, name, currency_code, description)
 VALUES ($1, $2, $3, $4)
-RETURNING bucket_id, user_id, name, is_general, created_at, display_order, currency_code, status, description
+RETURNING bucket_id, user_id, name, is_general, created_at, display_order, currency_code, status, description, health_notified_at
 `
 
 type CreateBucketParams struct {
@@ -53,6 +53,7 @@ func (q *Queries) CreateBucket(ctx context.Context, arg CreateBucketParams) (Flo
 		&i.CurrencyCode,
 		&i.Status,
 		&i.Description,
+		&i.HealthNotifiedAt,
 	)
 	return i, err
 }
@@ -79,7 +80,7 @@ func (q *Queries) EnsureGeneralBucket(ctx context.Context, userID uuid.UUID) err
 }
 
 const getBucket = `-- name: GetBucket :one
-SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, b.description, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
+SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, b.description, b.health_notified_at, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
 FROM float.buckets b
 LEFT JOIN float.bucket_ledger l ON b.bucket_id = l.bucket_id
 WHERE b.bucket_id = $1 AND b.user_id = $2 AND b.status = 'active'
@@ -87,16 +88,17 @@ GROUP BY b.bucket_id
 `
 
 type GetBucketRow struct {
-	BucketID     uuid.UUID
-	UserID       uuid.UUID
-	Name         string
-	IsGeneral    bool
-	CreatedAt    time.Time
-	DisplayOrder sql.NullInt32
-	CurrencyCode sql.NullString
-	Status       string
-	Description  string
-	BalanceCents int64
+	BucketID         uuid.UUID
+	UserID           uuid.UUID
+	Name             string
+	IsGeneral        bool
+	CreatedAt        time.Time
+	DisplayOrder     sql.NullInt32
+	CurrencyCode     sql.NullString
+	Status           string
+	Description      string
+	HealthNotifiedAt sql.NullTime
+	BalanceCents     int64
 }
 
 func (q *Queries) GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (GetBucketRow, error) {
@@ -112,13 +114,14 @@ func (q *Queries) GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid
 		&i.CurrencyCode,
 		&i.Status,
 		&i.Description,
+		&i.HealthNotifiedAt,
 		&i.BalanceCents,
 	)
 	return i, err
 }
 
 const getGeneralBucket = `-- name: GetGeneralBucket :one
-SELECT bucket_id, user_id, name, is_general, created_at, display_order, currency_code, status, description FROM float.buckets WHERE user_id = $1 AND is_general = TRUE
+SELECT bucket_id, user_id, name, is_general, created_at, display_order, currency_code, status, description, health_notified_at FROM float.buckets WHERE user_id = $1 AND is_general = TRUE
 `
 
 func (q *Queries) GetGeneralBucket(ctx context.Context, userID uuid.UUID) (FloatBucket, error) {
@@ -134,6 +137,7 @@ func (q *Queries) GetGeneralBucket(ctx context.Context, userID uuid.UUID) (Float
 		&i.CurrencyCode,
 		&i.Status,
 		&i.Description,
+		&i.HealthNotifiedAt,
 	)
 	return i, err
 }
@@ -182,7 +186,7 @@ func (q *Queries) ListBucketSampleTransactions(ctx context.Context, bucketID uui
 }
 
 const listBuckets = `-- name: ListBuckets :many
-SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, b.description, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
+SELECT b.bucket_id, b.user_id, b.name, b.is_general, b.created_at, b.display_order, b.currency_code, b.status, b.description, b.health_notified_at, COALESCE(SUM(l.amount_cents), 0)::BIGINT AS balance_cents
 FROM float.buckets b
 LEFT JOIN float.bucket_ledger l ON b.bucket_id = l.bucket_id
 WHERE b.user_id = $1 AND b.status = 'active'
@@ -191,16 +195,17 @@ ORDER BY b.display_order NULLS LAST, b.created_at ASC
 `
 
 type ListBucketsRow struct {
-	BucketID     uuid.UUID
-	UserID       uuid.UUID
-	Name         string
-	IsGeneral    bool
-	CreatedAt    time.Time
-	DisplayOrder sql.NullInt32
-	CurrencyCode sql.NullString
-	Status       string
-	Description  string
-	BalanceCents int64
+	BucketID         uuid.UUID
+	UserID           uuid.UUID
+	Name             string
+	IsGeneral        bool
+	CreatedAt        time.Time
+	DisplayOrder     sql.NullInt32
+	CurrencyCode     sql.NullString
+	Status           string
+	Description      string
+	HealthNotifiedAt sql.NullTime
+	BalanceCents     int64
 }
 
 func (q *Queries) ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBucketsRow, error) {
@@ -222,6 +227,7 @@ func (q *Queries) ListBuckets(ctx context.Context, userID uuid.UUID) ([]ListBuck
 			&i.CurrencyCode,
 			&i.Status,
 			&i.Description,
+			&i.HealthNotifiedAt,
 			&i.BalanceCents,
 		); err != nil {
 			return nil, err
@@ -256,7 +262,7 @@ ON CONFLICT (user_id, name) DO UPDATE SET
     is_general = EXCLUDED.is_general,
     currency_code = EXCLUDED.currency_code,
     description = EXCLUDED.description
-RETURNING bucket_id, user_id, name, is_general, created_at, display_order, currency_code, status, description
+RETURNING bucket_id, user_id, name, is_general, created_at, display_order, currency_code, status, description, health_notified_at
 `
 
 type SeedBucketParams struct {
@@ -288,6 +294,7 @@ func (q *Queries) SeedBucket(ctx context.Context, arg SeedBucketParams) (FloatBu
 		&i.CurrencyCode,
 		&i.Status,
 		&i.Description,
+		&i.HealthNotifiedAt,
 	)
 	return i, err
 }

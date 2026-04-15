@@ -12,7 +12,7 @@ env:
     [
       { "name": "home", "path": "/" },
       { "name": "bucket", "path": "/buckets/00000000-0000-4000-8000-000000000012" },
-      { "name": "rules", "path": "/rules" }
+      { "name": "health", "path": "/health" }
     ]
 
 jobs:

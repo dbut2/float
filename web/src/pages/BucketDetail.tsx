@@ -330,13 +330,16 @@ export default function BucketDetail() {
         </div>
 
         {/* Health banner */}
-        {bucketHealth && bucketHealth.has_trickle && !bucket?.is_general && (() => {
+        {bucketHealth && bucketHealth.status !== 'stale' && !bucket?.is_general && (() => {
           const STATUS_COLOR: Record<string, string> = {
             great: 'var(--green)', ok: 'var(--yellow)', warn: '#fb923c', critical: 'var(--red)', stale: 'var(--text-3)',
           }
           const color = STATUS_COLOR[bucketHealth.status] ?? 'var(--text-3)'
-          const prefix = (bucketHealth.status === 'warn' || bucketHealth.status === 'critical' || bucketHealth.is_at_risk) ? 'Recovery' : 'Budget'
+          const prefix = (bucketHealth.status === 'warn' || bucketHealth.status === 'critical') ? 'Recovery' : 'Budget'
           const allowanceLabel = `${prefix}: $${Math.abs(bucketHealth.daily_allowance).toFixed(2)}/day`
+          const days = bucketHealth.next_trickle_at
+            ? Math.max(Math.ceil((new Date(bucketHealth.next_trickle_at).getTime() - Date.now()) / 86_400_000), 0)
+            : 0
           return (
             <div style={{
               background: 'var(--surface)', borderRadius: 16, padding: '14px 16px',
@@ -353,9 +356,9 @@ export default function BucketDetail() {
                   <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: 'var(--text-2)', marginLeft: 10 }}>
                     {allowanceLabel}
                   </span>
-                  {bucketHealth.days_until_trickle > 0 && (
+                  {days > 0 && (
                     <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: 'var(--text-3)', marginLeft: 8 }}>
-                      · {bucketHealth.days_until_trickle}d until trickle
+                      · {days}d until trickle
                     </span>
                   )}
                 </div>
@@ -386,7 +389,7 @@ export default function BucketDetail() {
               <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
                 <div style={{
                   height: '100%',
-                  width: `${Math.min(bucketHealth.spent_pct * 100, 100)}%`,
+                  width: `${Math.min(bucketHealth.spent * 100, 100)}%`,
                   background: color,
                   borderRadius: 2,
                   transition: 'width 0.3s ease',

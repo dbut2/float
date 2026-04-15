@@ -82,17 +82,12 @@ export interface Trickle {
 export interface BucketHealth {
   bucket_id: string
   bucket_name: string
-  balance: number
-  balance_cents: number
   trickle_amount: number
   trickle_amount_cents: number
-  spent_pct: number
+  spent: number
   daily_allowance: number
-  days_until_trickle: number
   next_trickle_at: string | null
-  is_at_risk: boolean
   status: 'great' | 'ok' | 'warn' | 'critical' | 'stale'
-  has_trickle: boolean
   period: string | null
 }
 

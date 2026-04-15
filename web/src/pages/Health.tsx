@@ -23,114 +23,6 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 // ---------------------------------------------------------------------------
-// 30-day forecast chart
-// ---------------------------------------------------------------------------
-
-interface ForecastPoint {
-  day: number // 0..29
-  balance: number // in dollars
-}
-
-function buildForecast(buckets: BucketHealth[]): ForecastPoint[] {
-  const activeBuckets = buckets.filter((b) => b.has_trickle)
-  if (activeBuckets.length === 0) return []
-
-  const points: ForecastPoint[] = []
-  for (let day = 0; day <= 30; day++) {
-    let total = 0
-    for (const b of activeBuckets) {
-      // Start from current balance.
-      let bal = b.balance
-      // Simulate spending at current daily rate (if daily_allowance > 0 use it, else $0).
-      const dailySpend = b.daily_allowance > 0 ? b.daily_allowance : 0
-      bal -= dailySpend * day
-      // Add any trickle top-ups that land within the next `day` days.
-      if (b.days_until_trickle > 0 && b.days_until_trickle <= day) {
-        const tricklePeriodDays: Record<string, number> = {
-          daily: 1, weekly: 7, fortnightly: 14, monthly: 30,
-        }
-        const period = tricklePeriodDays[b.period ?? ''] ?? 30
-        const trickleCount = Math.floor((day - b.days_until_trickle) / period) + 1
-        bal += trickleCount * b.trickle_amount
-      }
-      total += Math.max(bal, 0)
-    }
-    points.push({ day, balance: total })
-  }
-  return points
-}
-
-function ForecastChart({ buckets }: { buckets: BucketHealth[] }) {
-  const points = buildForecast(buckets)
-  if (points.length === 0) return null
-
-  const W = 600
-  const H = 140
-  const PAD = { top: 12, right: 12, bottom: 24, left: 48 }
-  const innerW = W - PAD.left - PAD.right
-  const innerH = H - PAD.top - PAD.bottom
-
-  const maxBal = Math.max(...points.map((p) => p.balance), 0.01)
-
-  const toX = (day: number) => PAD.left + (day / 30) * innerW
-  const toY = (bal: number) => PAD.top + innerH - (bal / maxBal) * innerH
-
-  const pathD = points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.day).toFixed(1)},${toY(p.balance).toFixed(1)}`)
-    .join(' ')
-
-  // Fill area under curve
-  const fillD = `${pathD} L${toX(30).toFixed(1)},${(PAD.top + innerH).toFixed(1)} L${toX(0).toFixed(1)},${(PAD.top + innerH).toFixed(1)} Z`
-
-  // Y-axis labels
-  const yLabels = [0, 0.5, 1].map((pct) => ({
-    y: PAD.top + innerH - pct * innerH,
-    label: `$${Math.round(maxBal * pct)}`,
-  }))
-
-  // X-axis tick every 7 days
-  const xTicks = [0, 7, 14, 21, 30]
-
-  return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      style={{ width: '100%', height: 'auto', display: 'block' }}
-      aria-label="30-day balance forecast"
-    >
-      <defs>
-        <linearGradient id="fg-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.02" />
-        </linearGradient>
-      </defs>
-
-      {/* Grid lines */}
-      {yLabels.map(({ y, label }) => (
-        <g key={label}>
-          <line x1={PAD.left} y1={y} x2={PAD.left + innerW} y2={y} stroke="var(--border)" strokeWidth={1} />
-          <text x={PAD.left - 6} y={y + 4} textAnchor="end" fill="var(--text-3)" fontSize={10} fontFamily="JetBrains Mono, monospace">
-            {label}
-          </text>
-        </g>
-      ))}
-
-      {/* X-axis ticks */}
-      {xTicks.map((d) => (
-        <text key={d} x={toX(d)} y={H - 6} textAnchor="middle" fill="var(--text-3)" fontSize={10} fontFamily="DM Sans, sans-serif">
-          {d === 0 ? 'Today' : `+${d}d`}
-        </text>
-      ))}
-
-      {/* Fill */}
-      <path d={fillD} fill="url(#fg-grad)" />
-
-      {/* Line */}
-      <path d={pathD} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Mini health row (used in bucket ranking)
 // ---------------------------------------------------------------------------
 
@@ -139,8 +31,8 @@ function HealthRow({ bh, onApply }: { bh: BucketHealth; onApply: (bh: BucketHeal
   const label = STATUS_LABEL[bh.status] ?? bh.status
 
   const allowanceLabel = () => {
-    if (!bh.has_trickle) return 'No trickle'
-    const prefix = bh.status === 'warn' || bh.status === 'critical' || bh.is_at_risk ? 'Recovery' : 'Budget'
+    if (bh.status === 'stale') return 'No trickle'
+    const prefix = bh.status === 'warn' || bh.status === 'critical' ? 'Recovery' : 'Budget'
     return `${prefix}: $${Math.abs(bh.daily_allowance).toFixed(2)}/day`
   }
 
@@ -161,9 +53,10 @@ function HealthRow({ bh, onApply }: { bh: BucketHealth; onApply: (bh: BucketHeal
           </p>
           <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 3 }}>
             {allowanceLabel()}
-            {bh.has_trickle && bh.days_until_trickle > 0 && (
-              <span style={{ color: 'var(--text-3)' }}> · {bh.days_until_trickle}d until trickle</span>
-            )}
+            {bh.status !== 'stale' && bh.next_trickle_at && (() => {
+              const days = Math.max(Math.ceil((new Date(bh.next_trickle_at).getTime() - Date.now()) / 86_400_000), 0)
+              return days > 0 ? <span style={{ color: 'var(--text-3)' }}> · {days}d until trickle</span> : null
+            })()}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -189,11 +82,11 @@ function HealthRow({ bh, onApply }: { bh: BucketHealth; onApply: (bh: BucketHeal
       </div>
 
       {/* Spend progress bar */}
-      {bh.has_trickle && (
+      {bh.status !== 'stale' && (
         <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
           <div style={{
             height: '100%',
-            width: `${Math.min(bh.spent_pct * 100, 100)}%`,
+            width: `${Math.min(bh.spent * 100, 100)}%`,
             background: color,
             borderRadius: 2,
           }} />
@@ -332,7 +225,6 @@ export default function Health() {
     return (
       <div style={{ padding: '24px 20px' }}>
         <div className="shimmer" style={{ height: 160, borderRadius: 20, marginBottom: 16 }} />
-        <div className="shimmer" style={{ height: 200, borderRadius: 20, marginBottom: 16 }} />
         <div className="shimmer" style={{ height: 300, borderRadius: 20 }} />
       </div>
     )
@@ -344,7 +236,6 @@ export default function Health() {
     (a, b) => (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4),
   )
 
-  const activeBuckets = summary.buckets.filter((b) => b.has_trickle)
   const recommendBuckets = summary.buckets.filter(
     (b) => b.status === 'warn' || b.status === 'critical',
   )
@@ -398,22 +289,6 @@ export default function Health() {
           </div>
         </div>
       </div>
-
-      {/* 30-day forecast chart */}
-      {activeBuckets.length > 0 && (
-        <div
-          className="animate-fade-up"
-          style={{
-            background: 'var(--surface)', borderRadius: 20, padding: '20px 20px 16px',
-            marginBottom: 16, opacity: 0,
-          }}
-        >
-          <p style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 12, letterSpacing: '0.08em', color: 'var(--text-2)', marginBottom: 12 }}>
-            30-DAY FORECAST
-          </p>
-          <ForecastChart buckets={activeBuckets} />
-        </div>
-      )}
 
       {/* Recommendations */}
       {recommendBuckets.length > 0 && (

@@ -3,7 +3,6 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import BucketDetail from './pages/BucketDetail'
 import Settings from './pages/Settings'
-import Rules from './pages/Rules'
 import Onboarding from './pages/Onboarding'
 import Health from './pages/Health'
 
@@ -16,8 +15,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="buckets/:id" element={<BucketDetail />} />
           <Route path="health" element={<Health />} />
-          <Route path="rules" element={<Rules />} />
-          <Route path="settings" element={<Settings />} />
+<Route path="settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
