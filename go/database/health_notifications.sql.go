@@ -7,30 +7,29 @@ package database
 
 import (
 	"context"
-	"time"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 const getBucketHealthNotification = `-- name: GetBucketHealthNotification :one
-SELECT notified_at FROM float.bucket_health_notifications
+SELECT health_notified_at FROM float.buckets
 WHERE bucket_id = $1 AND user_id = $2
 `
 
-func (q *Queries) GetBucketHealthNotification(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (time.Time, error) {
+func (q *Queries) GetBucketHealthNotification(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (sql.NullTime, error) {
 	row := q.db.QueryRowContext(ctx, getBucketHealthNotification, bucketID, userID)
-	var notified_at time.Time
-	err := row.Scan(&notified_at)
-	return notified_at, err
+	var health_notified_at sql.NullTime
+	err := row.Scan(&health_notified_at)
+	return health_notified_at, err
 }
 
-const upsertBucketHealthNotification = `-- name: UpsertBucketHealthNotification :exec
-INSERT INTO float.bucket_health_notifications (bucket_id, user_id, notified_at)
-VALUES ($1, $2, now())
-ON CONFLICT (bucket_id, user_id) DO UPDATE SET notified_at = now()
+const setBucketHealthNotifiedAt = `-- name: SetBucketHealthNotifiedAt :exec
+UPDATE float.buckets SET health_notified_at = now()
+WHERE bucket_id = $1 AND user_id = $2
 `
 
-func (q *Queries) UpsertBucketHealthNotification(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, upsertBucketHealthNotification, bucketID, userID)
+func (q *Queries) SetBucketHealthNotifiedAt(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, setBucketHealthNotifiedAt, bucketID, userID)
 	return err
 }

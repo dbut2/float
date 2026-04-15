@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"time"
 
@@ -14,20 +13,15 @@ import (
 
 // BucketHealth holds computed health signals for a single bucket.
 type BucketHealth struct {
-	BucketID         uuid.UUID  `json:"bucket_id"`
-	BucketName       string     `json:"bucket_name"`
-	Balance          float64    `json:"balance"`        // AUD, in dollars
-	BalanceCents     int64      `json:"balance_cents"`  // raw cents
-	TrickleAmount    float64    `json:"trickle_amount"` // trickle cycle amount in dollars (0 if none)
-	TrickleAmountCents int64    `json:"trickle_amount_cents"`
-	SpentPct         float64    `json:"spent_pct"`        // 0–1, fraction spent this cycle
-	DailyAllowance   float64    `json:"daily_allowance"` // remaining / days until trickle
-	DaysUntilTrickle int        `json:"days_until_trickle"`
-	NextTrickleAt    *time.Time `json:"next_trickle_at,omitempty"`
-	IsAtRisk         bool       `json:"is_at_risk"`
-	Status           string     `json:"status"` // great/ok/warn/critical/stale
-	HasTrickle       bool       `json:"has_trickle"`
-	Period           string     `json:"period,omitempty"`
+	BucketID           uuid.UUID  `json:"bucket_id"`
+	BucketName         string     `json:"bucket_name"`
+	TrickleAmount      float64    `json:"trickle_amount"`
+	TrickleAmountCents int64      `json:"trickle_amount_cents"`
+	Spent              float64    `json:"spent"`
+	DailyAllowance     float64    `json:"daily_allowance"`
+	NextTrickleAt      *time.Time `json:"next_trickle_at,omitempty"`
+	Status             string     `json:"status"`
+	Period             string     `json:"period,omitempty"`
 }
 
 // HealthSummary is the top-level health payload returned by GET /api/health.
@@ -96,14 +90,11 @@ func (s *HealthService) GetHealthSummary(ctx context.Context, userID uuid.UUID) 
 		balanceDollars := float64(balanceCents) / 100.0
 
 		bh := BucketHealth{
-			BucketID:     r.BucketID,
-			BucketName:   r.Name,
-			BalanceCents: balanceCents,
-			Balance:      balanceDollars,
+			BucketID:   r.BucketID,
+			BucketName: r.Name,
 		}
 
 		t, hasTrickle := trickleByBucket[r.BucketID]
-		bh.HasTrickle = hasTrickle
 
 		if !hasTrickle {
 			bh.Status = "stale"
@@ -115,7 +106,6 @@ func (s *HealthService) GetHealthSummary(ctx context.Context, userID uuid.UUID) 
 		bh.TrickleAmountCents = t.AmountCents
 		bh.TrickleAmount = float64(t.AmountCents) / 100.0
 
-		// Find next trickle occurrence from today+1.
 		tomorrow := today.AddDate(0, 0, 1)
 		nextDate := nextOccurrence(t.StartDate, t.Period, tomorrow)
 		bh.NextTrickleAt = &nextDate
@@ -124,9 +114,7 @@ func (s *HealthService) GetHealthSummary(ctx context.Context, userID uuid.UUID) 
 		if daysUntil < 0 {
 			daysUntil = 0
 		}
-		bh.DaysUntilTrickle = daysUntil
 
-		// SpentPct = (trickleAmount - balance) / trickleAmount, clamped 0-1.
 		if t.AmountCents > 0 {
 			spent := t.AmountCents - balanceCents
 			pct := float64(spent) / float64(t.AmountCents)
@@ -136,24 +124,19 @@ func (s *HealthService) GetHealthSummary(ctx context.Context, userID uuid.UUID) 
 			if pct > 1 {
 				pct = 1
 			}
-			bh.SpentPct = pct
+			bh.Spent = pct
 		}
 
-		// DailyAllowance = balance / daysUntilTrickle (0 if no days left).
 		if daysUntil > 0 {
 			bh.DailyAllowance = balanceDollars / float64(daysUntil)
 		}
 
-		// IsAtRisk = balance is at or below zero before the next trickle.
-		bh.IsAtRisk = balanceCents <= 0
-
-		// Determine status.
 		switch {
-		case bh.IsAtRisk || bh.SpentPct > 0.8:
+		case balanceCents <= 0 || bh.Spent > 0.8:
 			bh.Status = "critical"
-		case bh.SpentPct > 0.6:
+		case bh.Spent > 0.6:
 			bh.Status = "warn"
-		case bh.SpentPct > 0.4:
+		case bh.Spent > 0.4:
 			bh.Status = "ok"
 		default:
 			bh.Status = "great"
@@ -162,7 +145,6 @@ func (s *HealthService) GetHealthSummary(ctx context.Context, userID uuid.UUID) 
 		buckets = append(buckets, bh)
 	}
 
-	// Compute overall score and counts.
 	var scoreSum float64
 	var scoreCount int
 	atRisk, stale, healthy := 0, 0, 0
@@ -172,13 +154,13 @@ func (s *HealthService) GetHealthSummary(ctx context.Context, userID uuid.UUID) 
 			stale++
 			continue
 		}
-		if b.IsAtRisk || b.Status == "critical" {
+		if b.Status == "critical" {
 			atRisk++
 		}
 		if b.Status == "great" || b.Status == "ok" {
 			healthy++
 		}
-		scoreSum += (1.0 - b.SpentPct) * 100.0
+		scoreSum += (1.0 - b.Spent) * 100.0
 		scoreCount++
 	}
 
@@ -218,36 +200,28 @@ func (s *HealthService) CheckAndNotify(ctx context.Context, userID, bucketID uui
 			break
 		}
 	}
-	if bh == nil || (bh.Status != "critical" && !bh.IsAtRisk) {
+	if bh == nil || bh.Status != "critical" {
 		return
 	}
 
 	// Check last notification time.
 	lastNotified, err := s.q.GetBucketHealthNotification(ctx, bucketID, userID)
-	if err == nil {
-		// Already notified — check if it was today.
-		today := utils.Today()
-		notifiedDate := utils.ToDate(lastNotified)
-		if !notifiedDate.Before(today) {
-			// Already notified today — skip.
-			return
-		}
-	} else if err != sql.ErrNoRows {
+	if err != nil {
 		log.Printf("health: CheckAndNotify: get notification: %v", err)
 		return
 	}
+	if lastNotified.Valid {
+		today := utils.Today()
+		if !utils.ToDate(lastNotified.Time).Before(today) {
+			return
+		}
+	}
 
 	// Send push notification.
-	var body string
-	if bh.IsAtRisk {
-		body = "Balance is at $0 — no daily allowance available."
-	} else {
-		body = "Over 80% spent this trickle cycle."
-	}
+	body := "Over 80% of this cycle's budget has been spent."
 	s.push.SendNotification(ctx, userID, bh.BucketName+" is critical", body)
 
-	// Upsert notification record.
-	if err := s.q.UpsertBucketHealthNotification(ctx, bucketID, userID); err != nil {
-		log.Printf("health: CheckAndNotify: upsert notification: %v", err)
+	if err := s.q.SetBucketHealthNotifiedAt(ctx, bucketID, userID); err != nil {
+		log.Printf("health: CheckAndNotify: set notification: %v", err)
 	}
 }

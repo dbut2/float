@@ -13,21 +13,16 @@ import (
 )
 
 type FloatBucket struct {
-	BucketID     uuid.UUID
-	UserID       uuid.UUID
-	Name         string
-	IsGeneral    bool
-	CreatedAt    time.Time
-	DisplayOrder sql.NullInt32
-	CurrencyCode sql.NullString
-	Status       string
-	Description  string
-}
-
-type FloatBucketHealthNotification struct {
-	BucketID   uuid.UUID
-	UserID     uuid.UUID
-	NotifiedAt time.Time
+	BucketID         uuid.UUID
+	UserID           uuid.UUID
+	Name             string
+	IsGeneral        bool
+	CreatedAt        time.Time
+	DisplayOrder     sql.NullInt32
+	CurrencyCode     sql.NullString
+	Status           string
+	Description      string
+	HealthNotifiedAt sql.NullTime
 }
 
 type FloatBucketLedger struct {
