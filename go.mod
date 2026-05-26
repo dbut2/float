@@ -9,13 +9,13 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.12.3
-	github.com/oapi-codegen/runtime v1.4.0
+	github.com/oapi-codegen/runtime v1.4.1
 	github.com/ollama/ollama v0.24.0
 	github.com/openai/openai-go v1.12.0
 	github.com/pressly/goose/v3 v3.27.1
 	golang.org/x/text v0.37.0
 	golang.org/x/time v0.15.0
-	google.golang.org/api v0.279.0
+	google.golang.org/api v0.280.0
 )
 
 require (
