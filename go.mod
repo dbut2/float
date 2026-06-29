@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.12.3
 	github.com/oapi-codegen/runtime v1.4.2
-	github.com/ollama/ollama v0.30.10
+	github.com/ollama/ollama v0.30.11
 	github.com/openai/openai-go v1.12.0
 	github.com/pressly/goose/v3 v3.27.1
 	golang.org/x/text v0.38.0
