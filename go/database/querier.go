@@ -23,6 +23,7 @@ type Querier interface {
 	DeleteTransfer(ctx context.Context, transferID uuid.UUID, userID uuid.UUID) (int64, error)
 	DeleteTrickle(ctx context.Context, trickleID uuid.UUID, userID uuid.UUID) (int64, error)
 	DeleteUpTransaction(ctx context.Context, transactionID uuid.UUID) error
+	DeleteUserByEmail(ctx context.Context, email string) error
 	EnsureGeneralBucket(ctx context.Context, userID uuid.UUID) error
 	GetActiveTrickleByToBucketID(ctx context.Context, toBucketID uuid.UUID, userID uuid.UUID) (GetActiveTrickleByToBucketIDRow, error)
 	GetBucket(ctx context.Context, bucketID uuid.UUID, userID uuid.UUID) (GetBucketRow, error)

@@ -70,6 +70,9 @@ func setup(r *gin.Engine) (*api.API, gin.HandlerFunc) {
 
 	if os.Getenv("DEMO_MODE") == "true" {
 		user, buckets, txs, transfers, trickles := seed.DemoScenario()
+		if err := queries.DeleteUserByEmail(context.Background(), user.Email); err != nil {
+			log.Fatalf("failed to reset demo data: %v", err)
+		}
 		userID, err := service.LoadData(context.Background(), queries, user, buckets, txs, transfers, trickles)
 		if err != nil {
 			log.Fatalf("failed to seed demo data: %v", err)
