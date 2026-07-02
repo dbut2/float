@@ -18,6 +18,10 @@ WHERE user_id = $1;
 SELECT * FROM float.users
 WHERE email = $1;
 
+-- name: DeleteUserByEmail :exec
+DELETE FROM float.users
+WHERE email = $1;
+
 -- name: SetUserToken :exec
 UPDATE float.users SET up_token = $2 WHERE user_id = $1;
 

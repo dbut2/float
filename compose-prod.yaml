@@ -3,6 +3,7 @@ name: float
 services:
   float-demo:
     image: ghcr.io/dbut2/float:latest
+    restart: always
     environment:
       - DEMO_MODE=true
       - DATABASE_DSN=postgres://float:float@demo-db:5432/float?sslmode=disable
@@ -23,6 +24,7 @@ services:
 
   demo-db:
     image: postgres:18
+    restart: always
     environment:
       POSTGRES_USER: float
       POSTGRES_PASSWORD: float
@@ -35,6 +37,7 @@ services:
 
   float:
     image: ghcr.io/dbut2/float:latest
+    restart: always
     environment:
       - DATABASE_DSN=${PROD_DSN}
       - BASE_URL=https://float.dbut.dev
@@ -62,6 +65,7 @@ services:
 
   watchtower:
     image: containrrr/watchtower
+    restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
